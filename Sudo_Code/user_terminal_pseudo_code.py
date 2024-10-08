@@ -10,7 +10,7 @@ def display_new_nav_information():
     # Display the new navigation information
     user_terminal.display()
 
-def respod_to_base_station():
+def respond_to_base_station():
     # Respond to the base station
     user_terminal.respond()
 
@@ -28,10 +28,8 @@ def disconnect_from_base_station():
 
 
 if __name__ == "__main__":
-
-    # Turn on the user terminal
-    turn_on()
-
+    # User Terminal's been turned on
+    
     # Connect to the base station
     connect_to_base_station()
 
@@ -43,6 +41,6 @@ if __name__ == "__main__":
 
         make_old_nav_information_stale()
     # Respond to the base station
-    respod_to_base_station()
+    respond_to_base_station()
 
 
