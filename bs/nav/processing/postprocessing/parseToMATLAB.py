@@ -38,8 +38,8 @@ Dimitry Melnikov
 '''
 
 ################# USER INPUTS ##################################
-# CSI Data Location
-folder = "data/subsystemdemo"
+# CSI Data Location (relative to location where this script is run in shell)
+folder = "bs/nav/csi_data/testing/in_room/basic_sets/at-boresight"
 
 # Array Geometry/Layout - Assume a Uniform Line Array (ULA) running off AX210 family
 # Each Antenna
@@ -58,6 +58,7 @@ elemPos = [
 #         (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
 # AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
 # NIC 2 is represented by being placed second in `NICdata`
+'''
 NICdata = [
     {   # NIC 1
         'file':  "rx_11_241125_120734",
@@ -71,17 +72,26 @@ NICdata = [
         1:      0,  # AUX
     },
 ]
+'''
+# Single NIC, for quick conversion.
+NICdata = [
+    {   # Single NIC
+        'file': "rx_11_241122_150223",
+        0:      1,
+        1:      0,
+    }
+]
 
 # Processing Options
 timestampTol = 100000   # Timestamp tolerance for related frames. Increase for more frames (but less accuracy along the array)
                     # Or decrease for fewer frames (but higher accuracy along the array)
                     # In DOA: Stationary Target can handle larger val. Moving tolerance needs tighter tolerance (lower value)
                     # Note also that the timestamp is an INTEGER!
-overrideAT = 2 # Override: Only select frames with this many TX Antennas
-overrideS = 57 # Override: Only select frames with this many S Antennas
+overrideAT = 0#2 # Override: Only select frames with this many TX Antennas
+overrideS = 0#57 # Override: Only select frames with this many S Antennas
 
 # Output File Options
-outputFilename = "relaxed-subdemo-mov90-45-matrix-only" #.mat suffix implied
+outputFilename = "singleton_test" #.mat suffix implied
 wantToSave = True  # Keep this false when troubleshooting this script
 matrixOnly = True   # If False, will save EVERYTHING. This is very time consuming + takes up loads of space lmao
                     # Set to True only if it's the first time running it, but be ready to wait
@@ -120,6 +130,7 @@ matlabOutputFull = {
 for nic in NICdata:
     csiFilename = nic['file']
     csiPath = os.path.join(os.getcwd(), folder, csiFilename + ".csi") # Import
+    print("File '"+csiPath+"' found? "+str(os.path.isfile(csiPath)));
     currCSI = Picoscenes(csiPath)   # Parse
 
     ## Place Metadata & Raw Data
@@ -185,6 +196,7 @@ for i in range(max(matlabOutputFull['count'])): # Go over as many indices as pos
     ## Knowing which frames are Temporally Related (same K), we now need to extract the
     #  CSI corresponding to each Receiving Antenna (Figure out AT, AR, and S)
     currCSIFrame = matlabOutputFull['raw'][maxFramesIndex][i]['CSI']
+    #import pdb; pdb.set_trace();
     # Check to see if we've assigned our global AT, AR, S sizes (to ensure homogeneous matrix)
     if AT < 0: # If we haven't assigned it yet
         # If there's no override, go for it
