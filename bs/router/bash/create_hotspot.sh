@@ -16,8 +16,9 @@ get_wifi_interface() {
 
     echo $INTERFACE
 }
-sudo systemctl enable NetworkManager
-sudo systemctl start NetworkManager
+# sudo systemctl enable NetworkManager
+# sudo systemctl start NetworkManager
+# sudo systemctl restart NetworkManager
 
 sleep 5
 
@@ -28,7 +29,7 @@ INTERFACE=$(get_wifi_interface)
 CHANNEL=6                   # Channel for the hotspot
 PASSWORD="YourPassword123"  # WPA2 password
 CONFIG_PATH="/etc/hostapd/hostapd.conf"  # Path to the hostapd config file
-
+SSID = ""
 # Check if user is running as root (required to modify /etc/hostapd)
 if [ "$(id -u)" -ne 0 ]; then
     echo "This script must be run as root."
