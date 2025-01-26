@@ -23,8 +23,8 @@ import os                                   # To retreive the file
 
 ################# USER INPUTS ##################################
 # Data location (relative to location where this script is run in shell)
-folder = ""#"bs/nav/csi_data/testing/in_room/basic_sets/at-boresight"
-file   = "DT_110deg"
+folder = "bs/nav/csi_data/testing/in_room/ranging/bs-to-laptop-1-21-25"
+file   = "bs-to-laptop-1-21-25"
 
 loadMat = True # True if we're loading .mat output from `parseToMATLAB.py`
 if (loadMat):
@@ -63,7 +63,7 @@ if show2DPlot:
         lines = [ ax.plot(subcFreq, np.angle(Hest[t, r, :, 0]), label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
 
     ax.set_title("CSI Phase vs Subcarriers")
-    ax.set_xlabel("Frequency (MHz)")
+    ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Phase (radians)")
     ax.legend()
     ax.grid()
@@ -93,7 +93,7 @@ if show3DPlotAll:
     ax2 = plt.figure().add_subplot(projection='3d')
     
     # Slider for AT-AR pair selection
-    ax_slider_at_ar = plt.axes([0.2, 0.2, 0.6, 0.03])
+    ax_slider_at_ar = plt.axes([0.2, 0.05, 0.6, 0.03])
     slider_at_ar = Slider(ax_slider_at_ar, "AT-AR Pair", 0, AT * AR - 1, valinit=0, valstep=1)
     
     # Update function for 3D plot (AT-AR Pair)
@@ -132,7 +132,7 @@ if show3DPlotDif:
     ax3 = plt.figure().add_subplot(projection='3d')
 
     # Slider for AT pair differences
-    ax_slider_at_diff = plt.axes([0.2, 0.1, 0.6, 0.03])
+    ax_slider_at_diff = plt.axes([0.2, 0.05, 0.6, 0.03])
     slider_at_diff = Slider(ax_slider_at_diff, "AT Pair Difference", 0, (AT - 1) * AR, valinit=0, valstep=1)
 
     # Update function for 3D plot (AT Pair Differences)

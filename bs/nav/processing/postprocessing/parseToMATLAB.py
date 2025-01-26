@@ -39,7 +39,7 @@ Dimitry Melnikov
 
 ################# USER INPUTS ##################################
 # CSI Data Location (relative to location where this script is run in shell)
-folder = "bs/nav/csi_data/testing/in_room/basic_sets/at-boresight"
+folder = "bs/nav/csi_data/testing/in_room/ranging/bs-to-laptop-1-21-25"
 
 # Array Geometry/Layout - Assume a Uniform Line Array (ULA) running off AX210 family
 # Each Antenna
@@ -76,7 +76,7 @@ NICdata = [
 # Single NIC, for quick conversion.
 NICdata = [
     {   # Single NIC
-        'file': "rx_11_241122_150223",
+        'file': "rx_phy0_250121_154139",
         0:      1,
         1:      0,
     }
@@ -91,7 +91,7 @@ overrideAT = 0#2 # Override: Only select frames with this many TX Antennas
 overrideS = 0#57 # Override: Only select frames with this many S Antennas
 
 # Output File Options
-outputFilename = "singleton_test" #.mat suffix implied
+outputFilename = "bs-to-laptop-1-21-25" #.mat suffix implied
 wantToSave = True  # Keep this false when troubleshooting this script
 matrixOnly = True   # If False, will save EVERYTHING. This is very time consuming + takes up loads of space lmao
                     # Set to True only if it's the first time running it, but be ready to wait
