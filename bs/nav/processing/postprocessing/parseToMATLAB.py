@@ -39,6 +39,7 @@ Dimitry Melnikov
 
 ################# USER INPUTS ##################################
 # CSI Data Location (relative to location where this script is run in shell)
+# hack to check computer for correct file location
 import platform
 if platform.node() == "vector-bs2":
     folder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/ranging/bs-to-laptop-1-21-25"
