@@ -6,7 +6,7 @@ We output a CSI matrix of size [AT AR S K], where:
 - AR: Number of Receive Antennas
 - S: Number of Subcarriers
 - K: Number of CSI Snapshots
-As well as the 'centerFreq' and 'chanBW', from which we can derive the wavelengths of 
+As well as the 'centerFreq' and 'chanBW', from which we can derive the wavelengths of
     each subcarrier for later processing
 
 We also output metadata (if so desired in USER INPUTS):
@@ -25,8 +25,8 @@ NOTE:
             - If this becomes an issue, we can change the restriction to maintain only ONE tx antenna.
     - That is:
         - AT and AR and S DO NOT CHANGE over the course of the CSI collection
-        - If (and WHEN) they do, we throw them out. 
-        
+        - If (and WHEN) they do, we throw them out.
+
 ..................................................................................
 We expect WSL, running in a virtual environment (on the WSL instance). In other words:
 :wsl
@@ -50,7 +50,7 @@ elemPos = [
     [0, -1.5*3.5e-2, 0], # [X, Y, Z] for Elem 0...
     [0, -0.5*3.5e-2, 0], # [X, Y, Z] for Elem 1...
     [0, 0.5*3.5e-2, 0],
-    [0, 1.5*3.5e-2, 0],    
+    [0, 1.5*3.5e-2, 0],
 ]
 
 # File location, as well as location relative to Array POV, facing out:
@@ -96,7 +96,13 @@ wantToSave = True  # Keep this false when troubleshooting this script
 matrixOnly = True   # If False, will save EVERYTHING. This is very time consuming + takes up loads of space lmao
                     # Set to True only if it's the first time running it, but be ready to wait
 
+
+import sys
+sys.path.append('/home/dt12/Code/VECTOR/bs/bs-venv/PicoscenesToolbox') #make sure that python can find the .so file
+
+
 ################################################################
+
 from picoscenes import Picoscenes   # To process the CSI
 import numpy as np                  # Numpy Processing
 import scipy.io                     # To save data as a .mat file
@@ -146,7 +152,7 @@ for nic in NICdata:
     matlabOutputFull['timestamps'].append(timeList)
 
 
-matlabOutputFull['timestamps'] = np.array(matlabOutputFull['timestamps'], dtype=object) # Convert to np array 
+matlabOutputFull['timestamps'] = np.array(matlabOutputFull['timestamps'], dtype=object) # Convert to np array
                                     # to take advantage of functions
 matlabOutputFull['elemPos'] = elemPos # Apply User-Supplied User Positions
 
@@ -157,7 +163,7 @@ print("...Done! CSI Loaded.")
 print("Parsing CSI for [AT AR S K] Matrix")
 maxFramesIndex = np.argmax(matlabOutputFull['count'])
 
-AT = AR =  S = -1 # To store our number of AT, AR, & S. Collected from the first time-related frame. 
+AT = AR =  S = -1 # To store our number of AT, AR, & S. Collected from the first time-related frame.
 
 for i in range(max(matlabOutputFull['count'])): # Go over as many indices as possible
     ## First, we need to figure out which other processed frames share
@@ -166,11 +172,11 @@ for i in range(max(matlabOutputFull['count'])): # Go over as many indices as pos
     #print("Frame: " +str(i))
     relatedFrameIndices = -1*np.ones(numNICS) # Frames in the other CSI files that are
                     # 'close enough' to our timestamp
-                    # i.e. -- they are considered to be in the same snapshot 
-    relatedFrameIndices[maxFramesIndex] = i; # Our timestamp is stored in the right place   
-    
+                    # i.e. -- they are considered to be in the same snapshot
+    relatedFrameIndices[maxFramesIndex] = i; # Our timestamp is stored in the right place
+
     targetTime = matlabOutputFull['timestamps'][maxFramesIndex][i]
-    
+
     # Search through each CSI file...
     for j in range(numNICS):
         if j == maxFramesIndex: # We're talking about ourselves
@@ -212,10 +218,10 @@ for i in range(max(matlabOutputFull['count'])): # Go over as many indices as pos
                 continue
         else:
             continue
-        
+
     ATARSframe = np.zeros((AT, AR, S), dtype=np.complex128)
-    
-    # Search through each related CSI file, verify dimensions and insert. 
+
+    # Search through each related CSI file, verify dimensions and insert.
     for j in range(numNICS):
         _relatedFrameIndex = int(relatedFrameIndices[j])
         _currCSIFrame = matlabOutputFull['raw'][j][_relatedFrameIndex]['CSI']
@@ -225,7 +231,7 @@ for i in range(max(matlabOutputFull['count'])): # Go over as many indices as pos
                 (_currCSIFrame['numTones'] != S):
             ATARSframe = None
             break # Throw frame away if we end up with nonhomogeneous output matrix
-    
+
         # Figure out which trace belongs to which antenna (this is an educated guess)
         # (e..g: 2 TX, 2 RX, 50 Subcarriers => size(CSI) = (2x2x50, ))
         # If we reshape it to (2, 2, 50) => CSI[0, 0, 50] ~ RX1 <- TX1
@@ -250,7 +256,7 @@ for i in range(max(matlabOutputFull['count'])): # Go over as many indices as pos
     print("Depositing a frame!")
     matlabOutputFull['outputMatrix'].append(ATARSframe)
 
-# Now that all frames have been deposited in the first dimension, we'd like to 
+# Now that all frames have been deposited in the first dimension, we'd like to
 #  permute them to fit the header of this file
 # [(K) AT AR S] -> [AT AR S (K)]
 if (np.size(matlabOutputFull['outputMatrix']) == 0):
