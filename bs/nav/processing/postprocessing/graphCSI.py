@@ -4,6 +4,8 @@ This script should take in processed CSI files (saved as a .mat)
 
 This will help visualize the semi-raw (processed) CSI
 
+(I recommend only doing one plot at a time)
+
 We work with a CSI matrix of size [AT AR S K], where:
 - AT: Number of Transmit Antennas
 - AR: Number of Receive Antennas
@@ -13,44 +15,129 @@ As well as the 'centerFreq' and 'chanBW', from which we can derive the wavelengt
     each subcarrier for later processing
 
 For now, we're going to focus on homogeneous datasets
+
+More info about CSI Structure:
+https://ps.zpj.io/matlab.html#structures-of-the-picoscenes-tx-and-rx-frames
 '''
 import numpy as np
 import matplotlib.pyplot as plt             # For graphing
 from matplotlib.widgets import Slider       # For graphing
 
+
+import sys                                  # For Picoscenes library, among others
 import scipy.io                             # To import .mat file
 import os                                   # To retreive the file
 
 ################# USER INPUTS ##################################
 # Data location (relative to location where this script is run in shell)
-folder = "bs/nav/csi_data/testing/in_room/ranging/bs-to-laptop-1-21-25"
-file   = "bs-to-laptop-1-21-25"
+folder = "bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS"
+file   = "rx_211_250202_155437"
 
-loadMat = True # True if we're loading .mat output from `parseToMATLAB.py`
+loadMat = False # True if we're loading .mat output from `parseToMATLAB.py`
 if (loadMat):
     csiPath = os.path.join(os.getcwd(), folder, file + ".mat")
     loadedStruct = scipy.io.loadmat(csiPath)
     Hest        = loadedStruct['outputMatrix']  # CSI Itself [AT AR S K]
     centerFreq  = loadedStruct['centerFreq']    # Center/Carrier Frequency of Collected CSI (Hz)
     chanBW      = loadedStruct['chanBW']        # Channel Bandwidth (Hz)
+else:
+    sys.path.append('/home/dt12/Code/VECTOR/bs/bs-venv/PicoscenesToolbox') #make sure that python can find the .so file
+    from picoscenes import Picoscenes   # To process the CSI
+    csiPath = os.path.join(os.getcwd(), folder, file + ".csi")
+    currCSI = Picoscenes(csiPath)
+
+    print("WARNING! CSI PARSING NOT IMPLEMENTED HERE. THIS WILL LIKELY NOT WORK!")
+    # TODO - Implement some CSI Parsing here
 
 doUnwrap = True # True if we want to unwrap phase. Leave false if want to keep raw
 
-show2DPlot = True
-show3DPlotAll = True # Plots all traces onto 3D plot
+showMACPlot = True    # Plots end digit in Standard MAC Header Frames, associated with the TX/RX MAC Addresses
+show2DPlot = False    # 2D Plot of CSI
+show3DPlotAll = False # Plots all traces onto 3D plot
 show3DPlotDif = False # This is a weird plot that should plot differences. I can't figure out how to interpret it, though.
 
 #################################################################
 # Variables of Interest:
-Hest_shape = np.shape(Hest)
-AT = Hest_shape[0]; AR = Hest_shape[1]; S = Hest_shape[2]; K = Hest_shape[3]
+if 'Hest' in locals():
+    # Only do if we have Hest loaded
+    Hest_shape = np.shape(Hest)
+    AT = Hest_shape[0]; AR = Hest_shape[1]; S = Hest_shape[2]; K = Hest_shape[3]
 
-# Calculate the Frequency Axis:
-subcSpacing = chanBW / S # Chan BW / # Subcarriers S
-subcFreq    = np.linspace(centerFreq - chanBW/2, \
-                          centerFreq + chanBW/2, \
-                          S)
-subcFreq = subcFreq.flatten() 
+    # Calculate the Frequency Axis:
+    subcSpacing = chanBW / S # Chan BW / # Subcarriers S
+    subcFreq    = np.linspace(centerFreq - chanBW/2, \
+                            centerFreq + chanBW/2, \
+                            S)
+    subcFreq = subcFreq.flatten() 
+else:
+    print("WARNING! CSI (`Hest`) NOT LOADED!")
+
+################ Initialize MAC Plot ################################
+if showMACPlot:
+    # Assumes access to the raw CSI file, parsed by Picoscenes.
+    # https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
+    timestamps = []                     # PPDU-associated timestamp
+    addr1 = []; addr2 = []; addr3 = []  # Contents of MAC Header
+    tofromDS = []                       # Combination of To/From DS
+    for i in range(currCSI.count):
+        toDS = currCSI.raw[i]['StandardHeader']['ControlField']['ToDS'];
+        fromDS = currCSI.raw[i]['StandardHeader']['ControlField']['FromDS'];
+
+        if toDS == 0 and fromDS == 0:
+            # Local Traffic
+            tofromDS.append(0)
+        elif toDS == 0 and fromDS == 1:
+            # From Base Station / AP to User Terminal / STA
+            tofromDS.append(1)
+        elif toDS == 1 and fromDS == 0:
+            # From User Terminal / STA to Base Station / AP
+            tofromDS.append(2)
+        else:
+            # Bigger Network Traffic (Unlikely)
+            tofromDS.append(3) 
+
+        timestamps.append(currCSI.raw[i]['RxSBasic']['timestamp'])
+
+        addr1.append(currCSI.raw[i]['StandardHeader']['Addr1'])
+        addr2.append(currCSI.raw[i]['StandardHeader']['Addr2'])
+        addr3.append(currCSI.raw[i]['StandardHeader']['Addr3'])
+
+    # Cast to Numpy Array for ease of use. Normalize to first timestamp.
+    timestamps = np.array(timestamps)
+    timestamps = timestamps - timestamps[0]
+    
+    addr1 = np.array(addr1); addr2 = np.array(addr2); addr3 = np.array(addr3)
+    tofromDS = np.array(tofromDS)
+
+    titles = [f"End Byte of MAC Header Addr1/2/3 Frames - ToDS=0, FromDS=0",
+              f"End Byte of MAC Header Addr1/2/3 Frames - ToDS=0, FromDS=1",
+              f"End Byte of MAC Header Addr1/2/3 Frames - ToDS=1, FromDS=0",
+              f"End Byte of MAC Header Addr1/2/3 Frames - ToDS=1, FromDS=1"]
+    
+    fig, axs = plt.subplots(2, 2)
+
+    for i in range(len(titles)):
+        # Apply mask to plot only what we need:
+        dsMASK = tofromDS == i # Wherever the combo is equal to 0, 1, 2, or 3...
+        time_tmp = timestamps[dsMASK] / 1e5 # Mask + Convert to 0.1s
+        addr1_tmp= addr1[dsMASK]
+        addr2_tmp= addr2[dsMASK]
+        addr3_tmp= addr3[dsMASK]
+
+        row = i//2  # Integer division to get the row
+        col = i%2   # The remainder goes in to the column
+        curr_ax = axs[row][col]
+        
+        curr_ax.scatter(time_tmp, addr1_tmp[:, 5], label='Addr1')
+        curr_ax.scatter(time_tmp, addr2_tmp[:, 5], label='Addr2')
+        curr_ax.scatter(time_tmp, addr3_tmp[:, 5], label='Addr3')
+        curr_ax.set_title(titles[i])
+        curr_ax.set_xlabel("Time Since First Timestamp (0.1s)")
+        curr_ax.set_ylabel("Value")
+        curr_ax.legend()
+        curr_ax.grid(True)
+
+    plt.show()
 
 ################ Initialize 2D Plot #################################
 if show2DPlot:
