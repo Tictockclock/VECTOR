@@ -47,9 +47,9 @@ Dimitry Melnikov
 import platform
 name_folder = "7_BS_LAPTOP_102.5DEG_9FT_BS"
 if platform.node() == "vector-bs2":
-    folder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/7_BS_LAPTOP_102.5DEG_9FT_BS"
+    folder = f"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/{name_folder}"
 else:
-    data_folder = "bs/nav/csi_data/testing/asec_basement/7_BS_LAPTOP_102.5DEG_9FT_BS"
+    data_folder = f"bs/nav/csi_data/testing/asec_basement/{name_folder}"
 
 ## Array Geometry/Layout - Assume a Uniform Line Array (ULA) running off AX210 family
 # Each Antenna
@@ -106,7 +106,7 @@ overrideAT = 0#2 # Override: Only select frames with this many TX Antennas
 overrideS = 0#57 # Override: Only select frames with this many S Antennas
 
 ## Output File Options
-outputFilename = "7_BS_LAPTOP_102.5DEG_9FT_BS" #.mat suffix implied
+outputFilename = f"{name_folder}" #.mat suffix implied
 wantToSave = True  # Keep this false when troubleshooting this script
 matrixOnly = True   # If False, will save EVERYTHING. This is very time consuming + takes up loads of space lmao
                     # Set to True only if it's the first time running it, but be ready to wait
