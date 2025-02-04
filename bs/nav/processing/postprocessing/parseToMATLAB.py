@@ -43,11 +43,13 @@ Dimitry Melnikov
 ################# USER INPUTS ##################################
 # CSI Data Location (relative to location where this script is run in shell)
 # hack to check computer for correct file location
+
 import platform
+name_folder = "7_BS_LAPTOP_102.5DEG_9FT_BS"
 if platform.node() == "vector-bs2":
     folder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/7_BS_LAPTOP_102.5DEG_9FT_BS"
 else:
-    folder = "bs/nav/csi_data/testing/asec_basement/7_BS_LAPTOP_102.5DEG_9FT_BS"
+    data_folder = "bs/nav/csi_data/testing/asec_basement/7_BS_LAPTOP_102.5DEG_9FT_BS"
 
 ## Array Geometry/Layout - Assume a Uniform Line Array (ULA) running off AX210 family
 # Each Antenna
@@ -147,7 +149,7 @@ matlabOutputFull = {
 # Iterate over our file names
 for nic in NICdata:
     csiFilename = nic['file']
-    csiPath = os.path.join(os.getcwd(), folder, csiFilename + ".csi") # Import
+    csiPath = os.path.join(os.getcwd(), data_folder, csiFilename + ".csi") # Import
     print("File '"+csiPath+"' found? "+str(os.path.isfile(csiPath)));
     currCSI = Picoscenes(csiPath)   # Parse
 
