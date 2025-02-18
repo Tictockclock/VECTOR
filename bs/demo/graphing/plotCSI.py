@@ -23,11 +23,12 @@ VECTOR_ROOT = os.getenv("VECTOR_ROOT")
 sys.path.insert(0, VECTOR_ROOT) if (VECTOR_ROOT is not None) and (VECTOR_ROOT not in sys.path) else None
 import setup; setup.loadModules()
 
-import procUtilsCSI
+import bs.nav.processing.utilsCSI as utilsCSI
 
 ####### FILES #####################################################################
 
-def plot2DCSI(Hest, centerFreq, chanBW, doUnwrap=True):
+def plot2DCSI(Hest, centerFreq, chanBW, \
+              title="CSI Phase vs. Subcarriers", doUnwrap=True):
     """ Plots CSI Phase in 2D Plot with Slider over Snapshots
 
     Args:
@@ -41,14 +42,25 @@ def plot2DCSI(Hest, centerFreq, chanBW, doUnwrap=True):
 
     # Extract Subcarrier Frequencies & Other Constants
     [AT, AR, S, K] = np.shape(Hest)
-    subcFreq = procUtilsCSI.getSubcFreq(centerFreq, chanBW, S)
+    subcFreq = utilsCSI.getSubcFreq(centerFreq, chanBW, S)
+
+    # Set up colors
+    # Colormap for each AT
+    colormaps = [plt.cm.Blues, plt.cm.Oranges, plt.cm.Greens, plt.cm.Purples]  # Add more if needed
+    if AT > len(colormaps):
+        raise ValueError("Not enough colormaps defined for the number of Transmitting Antennas.")
+    # Generate colors for each AR trace, making them darker as AR increases
+    colors = []
+    for t in range(AT):
+        base_colormap = colormaps[t % len(colormaps)]  # Cycle through colormaps if AT > len(colormaps)
+        colors.append([base_colormap(0.2 + 0.6 * r / AR) for r in range(AR)])  # Darker shades for higher AR
 
     if(doUnwrap):
-        lines = [ ax.plot(subcFreq, np.unwrap(np.angle(Hest[t, r, :, 0])), label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
+        lines = [ax.plot(subcFreq, np.unwrap(np.angle(Hest[t, r, :, 0])), marker='o', color=colors[t][r], label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
     else:
-        lines = [ ax.plot(subcFreq, np.angle(Hest[t, r, :, 0]), label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
+        lines = [ax.plot(subcFreq, (np.angle(Hest[t, r, :, 0])), marker='o', color=colors[t][r], label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
 
-    ax.set_title("CSI Phase vs Subcarriers")
+    ax.set_title(title)
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Phase (radians)")
     ax.legend()
@@ -72,3 +84,4 @@ def plot2DCSI(Hest, centerFreq, chanBW, doUnwrap=True):
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
+    plt.show()
