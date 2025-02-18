@@ -1,5 +1,8 @@
 '''
 THE GREAT FILTER OF GOR!
+
+(Driver Script)
+Dimitry Melnikov, 2/17/25
 '''
 
 # TODO - Maybe filter also by the `numSTS` field?
@@ -9,7 +12,7 @@ THE GREAT FILTER OF GOR!
 # CSI Data Location (relative to location where this script is run in shell)
 # hack to check computer for correct file location
 import platform
-name_folder = "2_BS_LAPTOP_90DEG_9+4FT_BS"
+name_folder = "1_BS_LAPTOP_90DEG_9FT_BS"
 if platform.node() == "vector-bs2":
     data_folder = f"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/{name_folder}"
 else:
@@ -34,16 +37,15 @@ elemPos = [
 # NIC 2 is represented by being placed second in `NICdata`
 NICdata = [
     {   # NIC 1
-        'file':  "rx_213_250202_161354",
-        1:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
-        0:      1,  # AUX
+        'file':  "rx_211_250202_155437",
+        0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
+        1:      1,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
-
     {   # NIC 2
-        'file': "rx_211_250202_161354",
-        1:      2,  # MAIN
-        0:      3,  # AUX
+        'file': "rx_213_250202_155437",
+        0:      2,  # MAIN
+        1:      3,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
 ]
@@ -51,7 +53,7 @@ NICdata = [
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
 #tofromDS = 2     # tofromDS = toDS*2 + fromDS. 1 is from BS to UT, 2 is from UT from BS. See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
-toDS = 1; fromDS = 0
+toDS = 0; fromDS = 1
 macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
@@ -78,7 +80,7 @@ loadedCSI = []              # List to contain the loaded in CSI
 for nic in NICdata:
     csiFilename = nic['file']
     csiPath = os.path.join(os.getcwd(), data_folder, csiFilename + ".csi") # Import
-    print(f"CSI FILE {csiFilename} found! At {csiPath}.")
+    print(f"CSI FILE {csiFilename} set up! At {csiPath}.")
     currCSI = Picoscenes(csiPath) # Load in data.
     loadedCSI.append(currCSI)
 
@@ -111,12 +113,13 @@ for frameOuter in loadedCSI[0].raw: # Iterate over the frames in the first NIC..
         group.extend(matches)
 
     # Only add `group` if we had at least one match from another NIC
-    if len(group) > 1:
+    if len(group) > 1 or (numNICS == 1):
         combinedCSI.append(group)
 
 # notes: in theory, we'll have some sets of combinedCSI that are > numNICS
 #       (these could be empty packets that we don't care much about -- garbage. Those we care about have a unique MPDU b/c timestamp? etc.)
 print(f"Combined CSI! Total co-related CSI frames: {len(combinedCSI)}")
+#import pdb; pdb.set_trace()
 
 ### FILTER ToDS AND FromDS || MAC ADDRESS ALIGNMENT ###
 # Configure the correct expected source/destination MAC addresses
@@ -136,7 +139,7 @@ for combinedFrames in combinedCSI:
         if (singleFrame['StandardHeader']['ControlField']['ToDS'] == toDS)        and \
            (singleFrame['StandardHeader']['ControlField']['FromDS'] == fromDS)    and \
            (singleFrame['StandardHeader']['Addr1'] == macDEST)                    and \
-           (singleFrame['StandardHeader']['Addr2'] == macSRC) 
+           (singleFrame['StandardHeader']['Addr2'] == macSRC)
     ]   # Only return frames that match ALL of the fields.
 
     # Only add `matches` if we have any matches.
@@ -170,6 +173,7 @@ for combinedFrames in combinedCSI:
 print(f"...Printing CSI Frames in macAlignedCSI with more frames than expected. If you see an output below, investigate! There shouldn't be anything.")
 for i in range(len(macAlignedCSI)): print(f"Index: {i} Size: {len(macAlignedCSI[i])}") if(len(macAlignedCSI[i]) > numNICS) else None
 print(f"Filtered SRC/DEST MAC Addresses! Total CSI frames remaining: {len(macAlignedCSI)}")
+# >> Shows Packet Format outliers. for i in range(len(combinedCSI)): print(f"Index: {i} Format: {(combinedCSI[i][0]['RxSBasic']['packetFormat'])}") if(combinedCSI[i][0]['RxSBasic']['packetFormat'] > 1) else None
 
 ### CONVERT TO USABLE MATRIX ###
 # At this point, all of the data should be exactly the same.
@@ -238,7 +242,7 @@ matlabOutput = {
     # The [AT AR S K]-sized Matrix containing the Parsed CSI
     'outputMatrix':     trimmedOutputMatrix,     
     # Center/Carrier Frequency of Collected CSI (Hz)
-    'centerFreq':       centerFreq_arr[0],     
+    'centerFreq':       centerFreq_arr[0],  # TODO - Investigate different centerFreqs via std()   
     # Channel Bandwidth (Hz)
     'chanBW':           chanBW_arr[0],
     # RX Antenna Element Positions
