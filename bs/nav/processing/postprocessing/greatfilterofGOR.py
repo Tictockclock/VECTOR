@@ -23,7 +23,7 @@ outputFilename = f"{name_folder}" #.mat suffix implied
 
 ### ARRAY GEOMETRY
 # Element Positions
-elemPos = [
+elemPos = [ # Base Station Layout
     [0, -43.65e-3, 0], # [X, Y, Z] for Elem 0...
     [0, -14.55e-3, 0], # [X, Y, Z] for Elem 1...
     [0, 14.55e-3, 0],
@@ -36,6 +36,7 @@ elemPos = [
 # AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
 # NIC 2 is represented by being placed second in `NICdata`
 NICdata = [
+    # Base Station Layout
     {   # NIC 1
         'file':  "rx_211_250202_155437",
         0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
@@ -47,15 +48,34 @@ NICdata = [
         0:      2,  # MAIN
         1:      3,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-    },
+    }
 ]
+
+# # NIC DATA & Element Positions for Laptop/UT Setup
+# # Element Positions
+# elemPos = [ # Laptop Layout (Estimated)
+#     [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
+#     [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
+# ]
+
+# NICdata = [
+#     {   # NIC 1
+#         'file':  "rx_2_250202_155435",
+#         0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
+#         1:      1,  # AUX
+#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+#     },
+# ]
 
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
-#tofromDS = 2     # tofromDS = toDS*2 + fromDS. 1 is from BS to UT, 2 is from UT from BS. See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
-toDS = 0; fromDS = 1
+# See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
+toDS = 1; fromDS = 0
 macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
+
+forceAT = 2    # 0 to disable, otherwise will only select CSI with the corresponding # Transmit Antennas
+forceAR = 2    # 0 to disable, otherwise will only select CSI with the corresponding # Receive Antennas
 
 ################################################################
 ######################## IMPORTS ###############################
@@ -175,23 +195,43 @@ for i in range(len(macAlignedCSI)): print(f"Index: {i} Size: {len(macAlignedCSI[
 print(f"Filtered SRC/DEST MAC Addresses! Total CSI frames remaining: {len(macAlignedCSI)}")
 # >> Shows Packet Format outliers. for i in range(len(combinedCSI)): print(f"Index: {i} Format: {(combinedCSI[i][0]['RxSBasic']['packetFormat'])}") if(combinedCSI[i][0]['RxSBasic']['packetFormat'] > 1) else None
 
+### FILTER FORCED PARAMETERS ###
+# Discard CSI with parameters not matching 'forced' variations.
+# If invalid number (<1) then ignore.
+print(f"Discarding CSI not matching parameters: AT: {forceAT}, AR: {forceAR}...")
+forcedCSI = []
+for alignedFrames in macAlignedCSI:
+    # Find all matches for parameters
+    matches = [
+        singleFrame for singleFrame in alignedFrames
+        if  ((forceAT < 1) or (singleFrame['CSI']['numTx'] == forceAT))        and \
+            ((forceAR < 1) or (singleFrame['CSI']['numRx'] == forceAR))
+    ]   # Only return frames that match ALL of the fields.
+
+    # Only add `matches` if we have any matches
+    if (len(matches) > 0):
+        forcedCSI.append(matches)
+
+print(f"Force-Filter Complete. Total CSI frames remaining: {len(forcedCSI)}")
+
 ### CONVERT TO USABLE MATRIX ###
 # At this point, all of the data should be exactly the same.
 # Every index in alignedFrames holds the same CSI frame at each instant as seen by each NIC.
 print("Converting to usable matrix...")
-ANTPERNIC = 2 # 2 antennas per NIC
+#ANTPERNIC = 2 # 2 antennas per NIC
 # Arrays to hold data for output.
 centerFreq_arr  = [] # Center Frequency
 chanBW_arr      = [] # Channel Bandwidth
 outputMatrix    = [] # Output [AT AR S K] Matrix
 
-for alignedFrames in macAlignedCSI:
+for alignedFrames in forcedCSI:
     # Pull out the frame dimensions
     firstCSIFrame = alignedFrames[0]['CSI'] # CSI from the 0th NIC in `alignedFrames`
 
-    AT = firstCSIFrame['numTx']      # Number of Transmit Antennas
-    AR = ANTPERNIC*numNICS              # Number of Antennas in total, over the entire array
-    S  = firstCSIFrame['numTones']   # Number of Subcarriers Tracked
+    AT = firstCSIFrame['numTx']         # Number of Transmit Antennas
+    AR_SING = firstCSIFrame['numRx']    # Number of Receive Antennas on Single NIC
+    AR = AR_SING*numNICS                # Number of Antennas in total, over the entire array
+    S  = firstCSIFrame['numTones']      # Number of Subcarriers Tracked
     centerFreq_arr.append(float(firstCSIFrame['CarrierFreq'])) # Given in Hz
     chanBW_arr.append(float(firstCSIFrame['CBW']*1e6))        # Channel BW given in MHz, convert to Hz
 
@@ -200,7 +240,8 @@ for alignedFrames in macAlignedCSI:
     # Match the Current Frame to the Indicated NIC via NIC MAC Address & Deposit the Frame in ATARSframe
     for currFrame in alignedFrames:         # In each frame:
         for nicIndex in range(numNICS):     # In each NIC:
-            if (currFrame['RxExtraInfo']['macaddr_cur'] == NICdata[nicIndex]['mac']):
+            if (currFrame['RxExtraInfo']['macaddr_cur'] == NICdata[nicIndex]['mac']): 
+                # Matching MAC + # Traces
                 # Reshape CSI Frame Data to fit what we need:
                 # Figure out which trace belongs to which antenna (educated guess)
                 # (eg: 2 TX, 2 RX, 50 Subcarriers => size(CSI) = (2x2x50, ))
@@ -210,21 +251,24 @@ for alignedFrames in macAlignedCSI:
                 # So, if we assume MAIN ~ RX1, AUX ~ RX2, then:
                 #                                   CSI[0, 0, 50] ~ MAIN <- TX1
                 #                                   CSI[1, 0, 50] ~ AUX  <- TX1
-                _localATARS = np.reshape(currFrame['CSI']['CSI'], (AT, ANTPERNIC, S))
+                _localATARS = np.reshape(currFrame['CSI']['CSI'], (AT, AR_SING, S))
                 # If our NIC is located in positions MAIN: 0, AUX: 1, then:
                 # ATARSframe[:, 0, :] = _localATARS[:, 0, :]
-                for ant in range(ANTPERNIC):
+                for ant in range(AR_SING):
                     antIndex = NICdata[nicIndex][ant] # Corresponds to postion in array, from left to right
                     ATARSframe[:, antIndex, :] = _localATARS[:, ant, :] # Deposit.
                     # TODO - Maybe check to see if this is empty, or has a different MIMO configuration?
 
     # Finally, with our [AT AR S] frame ready, we append it:
-    outputMatrix.append(ATARSframe)
+    if not np.all(ATARSframe == 0):
+        # But only append if the frame is not empty.
+        outputMatrix.append(ATARSframe)
 
 # We currently have an inhomogeneous array. Need to flatten it along the other dimensions.
 print("Detecting inhomogeneous array and truncating where necessary...")
 min_AT = min(arr.shape[0] for arr in outputMatrix) # Look for smallest amount of AT (minimum along dimension 0 (AT))
-trimmedOutputArrays = [arr[:min_AT, ...] for arr in outputMatrix] # Trim extraneous dimensions
+min_AR = min(arr.shape[1] for arr in outputMatrix) # Look for smallest amount of AR (minimum along dimension 1 (AR))
+trimmedOutputArrays = [arr[:min_AT, :min_AR, ...] for arr in outputMatrix] # Trim extraneous dimensions
 trimmedOutputMatrix = np.stack(trimmedOutputArrays, axis=-1)      # Stack the elements
 # ^^^ With all frames deposited in the first dimension, we ended up permuting them to fit the output expectations
 # [(K) AT AR S] -> [AT AR S (K)]
