@@ -74,8 +74,8 @@ toDS = 1; fromDS = 0
 macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
-forceAT = 2    # 0 to disable, otherwise will only select CSI with the corresponding # Transmit Antennas
-forceAR = 2    # 0 to disable, otherwise will only select CSI with the corresponding # Receive Antennas
+forceAT = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
+forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
 
 ################################################################
 ######################## IMPORTS ###############################
