@@ -45,7 +45,7 @@ Dimitry Melnikov
 # hack to check computer for correct file location
 
 import platform
-name_folder = "7_BS_LAPTOP_102.5DEG_9FT_BS"
+name_folder = "1_BS_LAPTOP_90DEG_9FT_BS"
 if platform.node() == "vector-bs2":
     folder = f"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/{name_folder}"
 else:
@@ -70,13 +70,13 @@ elemPos = [
 # NIC 2 is represented by being placed second in `NICdata`
 NICdata = [
     {   # NIC 1
-        'file':  "rx_211_250202_163506",
+        'file':  "rx_211_250202_155437",
         0:     3,  # MAIN
         1:      2,  # AUX
     },
 
     {   # NIC 2
-        'file': "rx_213_250202_163506",
+        'file': "rx_213_250202_155437",
         0:      0,  # MAIN
         1:      1,  # AUX
     },
