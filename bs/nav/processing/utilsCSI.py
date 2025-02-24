@@ -29,6 +29,7 @@ def loadCSIfromMAT(csiPath=None):
             chanBW,         # Channel Bandwidth (Hz)
             elemPos,        # Element Positions [[X0, Y0, Z0], [X1, Y1, Z1], ...]
             loadedStruct    # Source Struct
+            csiPath         # Path to loaded CSI File
         
         ]: Tuple with variables of interest.
     """
@@ -47,7 +48,7 @@ def loadCSIfromMAT(csiPath=None):
     chanBW          = loadedStruct['chanBW']        # Channel Bandwidth (Hz)
     elemPos         = loadedStruct['elemPos']       # Positions for each element [[X0, Y0, Z0], [X1, Y1, Z1], ...]
 
-    return [Hest, centerFreq, chanBW, elemPos, loadedStruct]
+    return [Hest, centerFreq, chanBW, elemPos, loadedStruct, csiPath]
     
 
 

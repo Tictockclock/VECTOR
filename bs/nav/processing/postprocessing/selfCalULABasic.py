@@ -32,12 +32,13 @@ spacing = 29.1e-3; # 29.1mm Spacing
 
 # Element Positions relative to the Element Positions in the Input CSI
 sourcePos = [
-    [0, -(4+0.5)*spacing, 0], # [X, Y, Z] for Elem 0...
-    [0, -(3+0.5)*spacing, 0], # [X, Y, Z] for Elem 1...
+    [0, -(3+0.5)*spacing, 0], # [X, Y, Z] for Elem 0...
+    [0, -(2+0.5)*spacing, 0], # [X, Y, Z] for Elem 1...
 ]
 #################################################################################
 ############################## IMPORTS ##########################################
 import numpy as np                  # Numpy Processing
+import scipy.io                     # To save data to .mat file
 
 ####################### Import VECTOR Libraries ##################################
 import os; import sys
@@ -51,7 +52,7 @@ import bs.demo.graphing.plotCSI as plotCSI          # To plot manipulated CSI
 #################################################################################
 ########################### DRIVER SETUP ########################################
 ### LOAD CSI ###
-[Hest, centerFreq, chanBW, elemPos, _] = utilsCSI.loadCSIfromMAT()
+[Hest, centerFreq, chanBW, elemPos, _, _] = utilsCSI.loadCSIfromMAT()
 
 ### EXTRACT CSI/SYSTEM CONSTANTS + EXTRACT SUBCARRIER FREQUENCIES ###
 [AT, AR, S, K] = np.shape(Hest)
@@ -91,12 +92,43 @@ plotCSI.plot2DCSI(offsetCSI, centerFreq, chanBW, title="Measured CSI Offset", do
 
 #################################################################################
 ################ APPLY OFFSETS TO CAL DATA FOR VERIF ############################
+# correctedCSI = np.zeros((AT, AR, S, K), dtype=np.complex128)
+# correctedCSI[:, :, :, 0] = Hest[:, :, :, 0] / (Hest[:, :, :, -1] / idealCSI)
+# import pdb; pdb.set_trace()
+# for k in range(1, K-1):
+#     correctedCSI[:, :, :, k] = Hest[:, :, :, k] / (Hest[:, :, :, k-1] / idealCSI)
+
+# plotCSI.plot2DCSI(correctedCSI, centerFreq, chanBW, title="'Corrected' CSI?'", doUnwrap=True)
 correctedCSI = np.zeros((AT, AR, S, K), dtype=np.complex128)
-correctedCSI[:, :, :, 0] = Hest[:, :, :, 0] / (Hest[:, :, :, -1] / idealCSI)
-import pdb; pdb.set_trace()
-for k in range(1, K-1):
-    correctedCSI[:, :, :, k] = Hest[:, :, :, k] / (Hest[:, :, :, k-1] / idealCSI)
+calOffset = np.mean(offsetCSI, axis=3)          # Get average offset-from-ideal over time
+calOffsetMult = np.expand_dims(calOffset, axis=-1)      # Reintroduce the K dimension
+calOffsetMult = np.repeat(calOffsetMult, K, axis=-1)    # Duplicate K times
+correctedCSI = Hest / calOffsetMult                     # Apply Offset
 
 plotCSI.plot2DCSI(correctedCSI, centerFreq, chanBW, title="'Corrected' CSI?'", doUnwrap=True)
+
+#################################################################################
+################## APPLY OFFSETS TO NON-CAL DATA  ###############################
+print("Select Non-Calibrated CSI from same dataset")
+### LOAD CSI ###
+[preHest, _, _, _, preStruct_, preCSIPath] = utilsCSI.loadCSIfromMAT()
+[_, _, _, preK] = np.shape(preHest)
+
+### APPLY OFFSET ###
+calOffsetMult = np.expand_dims(calOffset, axis=-1)
+calOffsetMult = np.repeat(calOffsetMult, preK, axis=-1)
+correctedCSI = preHest / calOffsetMult
+
+plotCSI.plot2DCSI(correctedCSI, centerFreq, chanBW, title="'Post-Calibrated' CSI?", doUnwrap=True)
+
+### SAVE MODIFIED CSI TO MATLAB FILE ###
+print("Saving Modified CSI to .mat file...")   
+matlabOutput = preStruct_
+matlabOutput['outputMatrix'] = correctedCSI
+
+filename = os.path.splitext(os.path.basename(preCSIPath))[0] + "_POSTCAL"
+scipy.io.savemat(f"{filename}.mat", matlabOutput)
+
+print(f"Done. Saved to {filename}.mat")
 
 import pdb; pdb.set_trace()
