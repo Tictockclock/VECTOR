@@ -126,6 +126,9 @@ celerybeat.pid
 .venv
 .bs-venv
 bs-venv/
+ut/.ut-venv
+ut/bs-venv/
+ut-venv/
 env/
 venv/
 ENV/
