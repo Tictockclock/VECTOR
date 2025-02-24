@@ -12,7 +12,7 @@ Dimitry Melnikov, 2/17/25
 # CSI Data Location (relative to location where this script is run in shell)
 # hack to check computer for correct file location
 import platform
-name_folder = "1_BS_LAPTOP_90DEG_9FT_BS"
+name_folder = "7_BS_LAPTOP_102.5DEG_9FT_BS"
 if platform.node() == "vector-bs2":
     data_folder = f"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/{name_folder}"
 else:
@@ -38,13 +38,13 @@ elemPos = [ # Base Station Layout
 NICdata = [
     # Base Station Layout
     {   # NIC 1
-        'file':  "rx_211_250202_155437",
+        'file':  "rx_213_250202_163506",
         0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
         1:      1,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
     {   # NIC 2
-        'file': "rx_213_250202_155437",
+        'file': "rx_211_250202_163506",
         0:      2,  # MAIN
         1:      3,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
@@ -74,7 +74,7 @@ toDS = 1; fromDS = 0
 macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
-forceAT = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
+forceAT = 1    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
 
 ################################################################
@@ -194,6 +194,38 @@ print(f"...Printing CSI Frames in macAlignedCSI with more frames than expected. 
 for i in range(len(macAlignedCSI)): print(f"Index: {i} Size: {len(macAlignedCSI[i])}") if(len(macAlignedCSI[i]) > numNICS) else None
 print(f"Filtered SRC/DEST MAC Addresses! Total CSI frames remaining: {len(macAlignedCSI)}")
 # >> Shows Packet Format outliers. for i in range(len(combinedCSI)): print(f"Index: {i} Format: {(combinedCSI[i][0]['RxSBasic']['packetFormat'])}") if(combinedCSI[i][0]['RxSBasic']['packetFormat'] > 1) else None
+
+### COUNT UP FORCED PARAMETERS IN REMAINING CSI (STATISTICS) ###
+countForcedUnpaired = np.zeros((2, 2))
+countForcedPaired   = np.zeros((2, 2))
+for alignedFrames in macAlignedCSI:
+    # Count up the unpaired ones.
+    for singleFrame in alignedFrames:
+        numTX = singleFrame['CSI']['numTx'] - 1 # Never have frames with 0 numTX (ie dimensions)
+        numRX = singleFrame['CSI']['numRx'] - 1
+
+        countForcedUnpaired[numTX][numRX] = countForcedUnpaired[numTX][numRX] + 1
+
+    # Count up the paired ones (that match one another)
+    matches = [
+        singleFrame for singleFrame in alignedFrames
+        if  ((singleFrame['CSI']['numTx'] == alignedFrames[0]['CSI']['numTx']))        and \
+            ((singleFrame['CSI']['numRx'] == alignedFrames[0]['CSI']['numRx']))
+    ]   # Only return frames that match ALL of the fields.
+
+    # Count up the paired ones now.
+    numTX = matches[0]['CSI']['numTx'] - 1
+    numRX = matches[0]['CSI']['numRx'] - 1
+    
+    countForcedPaired[numTX][numRX] = countForcedPaired[numTX][numRX] + 1
+
+print(f"Number of Frames with forced parameters")
+print(f"(Y DIMENSION) AT (max amnt: { np.shape(countForcedUnpaired)[0]}) vs. forced: {forceAT}")
+print(f"(X DIMENSION) AR (max amnt: { np.shape(countForcedUnpaired)[1]}) vs. forced: {forceAR}")
+print("Unpaired (Don't care if they're paired up)")
+print(countForcedUnpaired)
+print("Pairs (Sets that share those same properties)")
+print(countForcedPaired)
 
 ### FILTER FORCED PARAMETERS ###
 # Discard CSI with parameters not matching 'forced' variations.
