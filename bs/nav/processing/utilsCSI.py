@@ -1,6 +1,8 @@
 '''
 CSI Utilities
 
+DOES NOT REQUIRE THE PICOSCENES LIBRARY!
+
 (Module)
 Dimitry Melnikov, 2/17/25
 '''

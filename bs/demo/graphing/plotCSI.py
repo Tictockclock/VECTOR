@@ -20,6 +20,7 @@ from matplotlib.widgets import Slider
 # Import VECTOR Libraries
 import os; import sys
 VECTOR_ROOT = os.getenv("VECTOR_ROOT")
+print("WARNING! VECTOR_ROOT NOT DEFINED! RUN THIS FROM VECTOR ROOT DIRECTORY: `export VECTOR_ROOT=$(pwd)`") if (VECTOR_ROOT is None) else None
 sys.path.insert(0, VECTOR_ROOT) if (VECTOR_ROOT is not None) and (VECTOR_ROOT not in sys.path) else None
 import setup; setup.loadModules()
 

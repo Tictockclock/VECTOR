@@ -135,6 +135,9 @@ ENV/
 env.bak/
 venv.bak/
 
+#recived files
+bs/received_files/
+
 # Spyder project settings
 .spyderproject
 .spyproject

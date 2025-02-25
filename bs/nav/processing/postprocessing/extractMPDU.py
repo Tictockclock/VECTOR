@@ -4,6 +4,8 @@ Extract the WiFi Frames from Collected CSI for Rebroadcasting
 Given a single CSI file, with chosen MAC Header properties, 
 extract the raw MPDU for rebroadcasting
 
+(THIS DOESN'T WORK FOR RETRANSMISSION ON NICS BTW)
+
 DISCLAIMER: FOR EDUCATIONAL PURPOSES ONLY. 
 WE DO NOT TAKE RESPONSIBILITY FOR MISUSE OF CODE.
 
@@ -161,13 +163,7 @@ def injectFrameAndListen(framePath, injectID="231", monID="211",
     # Great Big WiFi Channelization Table: https://ps.zpj.io/channels.html#id1
 
     # Build the injection command string
-    cmd = {
-        f'PicoScenes "-d debug;'
-        f'-i {injectID}'
-        f'--mode injector --tx-from-file {framePath} --repeat 1 --delay 0 --channel \'{chan}\';'
-        f'-i {monID}'
-        f'--mode logger'
-    }
+    cmd = f"PicoScenes \"-d debug; -i {injectID} --mode injector --tx-from-file {framePath} --repeat 1 --delay 0 --channel '{chan}'; -i {monID} --mode logger; q\""
 
     print("Running injection command:")
     print(cmd)
@@ -203,6 +199,10 @@ def main(toDS, fromDS, macBS, macUT, csiPath=None):
 
 if __name__ == "__main__":
     # Extract + Save the data:
-    main(toDS, fromDS, macBS, macUT)
+    #main(toDS, fromDS, macBS, macUT)
 
     # Inject the data:
+    framePath = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS/MPDUS_TO1_FM0/frame_0.bin"
+    injectFrameAndListen(framePath, injectID="231", monID="211",\
+                         chan="2412 HT20", timelimit=100)
+    # ^^^ Untested!
