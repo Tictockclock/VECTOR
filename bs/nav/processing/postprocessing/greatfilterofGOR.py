@@ -12,14 +12,14 @@ Dimitry Melnikov, 2/17/25
 # CSI Data Location (relative to location where this script is run in shell)
 # hack to check computer for correct file location
 import platform
-name_folder = "7_BS_LAPTOP_102.5DEG_9FT_BS"
+name_folder = "2_BS_LAPTOP_ROOM_+90deg_4ft_BS"
 if platform.node() == "vector-bs2":
     data_folder = f"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/{name_folder}"
 else:
-    data_folder = f"bs/nav/csi_data/testing/asec_basement/{name_folder}"
+    data_folder = f"bs/nav/csi_data/testing/in_room/2-24-25/{name_folder}"
 
 ### Output File Options
-outputFilename = f"{name_folder}" #.mat suffix implied
+outputFilename = f"{name_folder}_CAL" #.mat suffix implied
 
 ### ARRAY GEOMETRY
 # Element Positions
@@ -38,14 +38,14 @@ elemPos = [ # Base Station Layout
 NICdata = [
     # Base Station Layout
     {   # NIC 1
-        'file':  "rx_213_250202_163506",
-        0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
-        1:      1,  # AUX
+        'file':  "21_+90deg_4ft",
+        0:      1,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
+        1:      2,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
     {   # NIC 2
-        'file': "rx_211_250202_163506",
-        0:      2,  # MAIN
+        'file': "22_+90deg_4ft",
+        0:      0,  # MAIN
         1:      3,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     }
@@ -71,7 +71,8 @@ NICdata = [
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
 toDS = 1; fromDS = 0
-macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
+#macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
+macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
 forceAT = 1    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas

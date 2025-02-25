@@ -4,6 +4,8 @@ Extract the WiFi Frames from Collected CSI for Rebroadcasting
 Given a single CSI file, with chosen MAC Header properties, 
 extract the raw MPDU for rebroadcasting
 
+(THIS DOESN'T WORK FOR RETRANSMISSION ON NICS BTW)
+
 DISCLAIMER: FOR EDUCATIONAL PURPOSES ONLY. 
 WE DO NOT TAKE RESPONSIBILITY FOR MISUSE OF CODE.
 
@@ -203,3 +205,4 @@ if __name__ == "__main__":
     framePath = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS/MPDUS_TO1_FM0/frame_0.bin"
     injectFrameAndListen(framePath, injectID="231", monID="211",\
                          chan="2412 HT20", timelimit=100)
+    # ^^^ Untested!

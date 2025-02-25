@@ -39,3 +39,22 @@ def loadModules():
             full_path = os.path.join(VECTOR_ROOT, p)
             if full_path not in sys.path:
                 sys.path.append(full_path)
+
+def loadPicoscenes():
+    # This time, specifically load Picoscenes library (which is not available on every machine due to OS limits)
+    VECTOR_ROOT = os.getenv("VECTOR_ROOT")
+
+    if not VECTOR_ROOT:
+        print("VECTOR_ROOT UNDEFINED! This run will likely fail")
+        print("From VECTOR entrypoint, run `export VECTOR_ROOT=$(pwd)`")
+        return # Avoid modifying sys.path with None values
+
+    else:
+        paths = [
+                'bs/bs-venv/PicoscenesToolbox' # Base Station's path to Picoscenes Toolbox
+                ]
+
+        for p in paths:
+            full_path = os.path.join(VECTOR_ROOT, p)
+            if full_path not in sys.path:
+                sys.path.append(full_path)
