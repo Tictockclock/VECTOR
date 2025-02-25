@@ -25,18 +25,18 @@ elemPos = [ # Base Station Layout
 #         (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
 # AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
 # NIC 2 is represented by being placed second in `NICdata`
-datasetFolder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
+datasetFolder = ""#"/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
 NICdata = [
     # Base Station Layout
     {   # NIC 1
-        'file':  "21_90deg_4ft", # Leave empty to select during dialogue.
-        0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
-        1:      1,  # AUX
+        'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
+        0:      1,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
+        1:      2,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
     {   # NIC 2
-        'file': "21_90deg_4ft", # Leave empty to select during dialogue.
-        0:      2,  # MAIN
+        'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
+        0:      0,  # MAIN
         1:      3,  # AUX
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     }
@@ -67,7 +67,7 @@ macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b]
 #macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
-forceAT = 1    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
+forceAT = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
 
 ################################################################
@@ -163,7 +163,7 @@ def loadMultiNICS(NICdata, datasetFolder=None):
     numNICS = len(NICdata)      # Number of CSI files that we're parsing
     loadedCSI = []              # List to contain the loaded in CSI
 
-    if datasetFolder is None:
+    if (datasetFolder is None) or (not os.path.isdir(datasetFolder)):
         datasetFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Please select CSI Dataset Folder.")
 
     # Iterate over our file names
@@ -210,7 +210,7 @@ def alignMPDU(numNICS, loadedCSI):
             # Find all matches in this NIC
             matches = [
                 frameInner for frameInner in loadedCSI[nic_index].raw
-                if frameInner['MPDUS'] == mpduOuter
+                if frameInner['MPDUS'][0][0:33] == mpduOuter[0][0:33] # TODO - USE !ONLY! IF USING HOTSPOT + MONITOR MODE CONFIG
             ]   # ^^ Store `frameInner` for each match.
             # Add all found matches
             group.extend(matches)
@@ -276,8 +276,6 @@ def filterSrcDest(combinedCSI, toDS, fromDS, macBS, macUT):
                 singleFrame for singleFrame in matches
                 if (singleFrame['RxSBasic']['MCS'] == firstMCS)
             ]   # Only return frames with matching MCS
-
-            import pdb; pdb.set_trace()
 
             # Only add `matchesMCS` if MCS didn't change over those frames.
             if (len(matchesMCS) > 0):
@@ -537,7 +535,7 @@ def main(elemPos, NICdata,
     [outputMatrix, centerFreq_arr, chanBW_arr] = convertToUsableMatrix(forcedCSI, NICdata)
 
     print("Saving CSI to .mat file...")  
-    outputFilename = (os.path.dirname(csiPath)) # Output filename is the same as old directory
+    outputFilename = os.path.basename(os.path.dirname(csiPath)) # Output filename is the same as old directory
     filepath = saveCSItoMAT(outputMatrix, centerFreq=centerFreq_arr[0], chanBW=chanBW_arr[0], \
                             elemPos=elemPos, outputFilename=outputFilename)
 
