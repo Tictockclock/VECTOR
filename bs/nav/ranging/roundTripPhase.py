@@ -104,7 +104,7 @@ for i in range(frames):
 c = 3.8e8 # speed of light
 fc = 2.412e9 # center frequency 2412 MHz
 
-# Assign the shape of Hest_BS to a variable
+# Assign the shape of Hest_BS and Hest_UT to a variable
 # This will output (AT, AR, S, K)
 shape_BS = np.shape(Hest_BS)
 shape_UT = np.shape(Hest_UT)
@@ -119,17 +119,17 @@ subcFreq_BS = utilsCSI.getSubcFreq(centerFreq_BS,chanBW_BS,shape_BS[2])
 subcFreq_UT = utilsCSI.getSubcFreq(centerFreq_UT,chanBW_UT,shape_UT[2])
 
 # Pull out the frame associated with 2412 MHz
-test3_BS = np.where(subcFreq_BS == 2.412e9)
-test3_UT = np.where(subcFreq_UT == 2.412e9)
+centerFreqFrame_BS = np.where(subcFreq_BS == 2.412e9)
+centerFreqFrame_UT = np.where(subcFreq_UT == 2.412e9)
 
-# This will iterate through every frame and assign a value of H_RT to each frame
-H_RT = Hest_BS[0,1,test3_BS,:minK] * Hest_UT[0,1,test3_UT,:minK]
+# This will iterate through every frame and assign a value of H_RT to each frame at the specific freq
+H_RT = Hest_BS[0,1,centerFreqFrame_BS,:minK] * Hest_UT[0,1,centerFreqFrame_UT,:minK]
 
 # Get the angle in radians for each frame in H_RT
 H_RT_angle = np.angle(H_RT)
 
 # Each frame of H_RT applied to distance equation
-d_rtp_array= -1/2 * (H_RT_angle / (2 * np.pi)) * (c / fc)
+d_rtp_array = -1/2 * (H_RT_angle / (2 * np.pi)) * (c / fc)
 
 # Plotting
 import matplotlib.pyplot as plt
@@ -144,4 +144,4 @@ import pdb; pdb.set_trace()
 
 #H_RT = np.zeros((1, K))
 #for k in range(minK):
-#    H_RT[k] = Hest_BS[1,1,test3_BS,k] * Hest_UT[1,1,test3_UT,k]
+#    H_RT[k] = Hest_BS[1,1,centerFreqFrame_BS,k] * Hest_UT[1,1,centerFreqFrame_UT,k]

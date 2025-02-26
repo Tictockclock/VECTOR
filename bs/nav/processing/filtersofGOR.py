@@ -25,7 +25,7 @@ elemPos = [ # Base Station Layout
 #         (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
 # AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
 # NIC 2 is represented by being placed second in `NICdata`
-datasetFolder = ""#"/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
+datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
 NICdata = [
     # Base Station Layout
     {   # NIC 1
@@ -51,7 +51,7 @@ NICdata = [
 
 # NICdata = [
 #     {   # NIC 1
-#         'file':  "rx_2_250202_155435",
+#         'file':  "22_90deg_4ft",
 #         0:      0,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
 #         1:      1,  # AUX
 #         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
@@ -63,8 +63,7 @@ NICdata = [
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
 toDS = 1; fromDS = 0
 #macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # Base Station MAC Address
-macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b]
-#macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
+macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
 forceAT = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
@@ -511,10 +510,11 @@ def saveCSItoMAT(outputMatrix, centerFreq, chanBW, elemPos, outputFilename, outp
     return filepath
 
 ######################### DRIVER SECTION ####################################
-def main(elemPos, NICdata, 
+def parseMultiNIC(elemPos, NICdata, 
          toDS, fromDS, macBS, macUT, 
          forceAT=0, forceAR=0,
          datasetFolder=""):
+    
     numNICS = len(NICdata)  # Number of CSI files that we're parsing
     
     print("Loading CSI from raw .csi files:")
@@ -541,4 +541,4 @@ def main(elemPos, NICdata,
 
 
 if __name__ == "__main__":
-    main(elemPos, NICdata, toDS, fromDS, macBS, macUT, forceAT, forceAR, datasetFolder)
+    parseMultiNIC(elemPos, NICdata, toDS, fromDS, macBS, macUT, forceAT, forceAR, datasetFolder)
