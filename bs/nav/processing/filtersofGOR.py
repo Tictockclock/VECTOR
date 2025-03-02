@@ -13,11 +13,12 @@ Dimitry Melnikov, 2/25/25
 ################# USER INPUTS ##################################
 ### ARRAY GEOMETRY
 # Element Positions
+elemSpacing = 0.086112 # 0.7 Lambda?
 elemPos = [ # Base Station Layout
-    [0, -43.65e-3, 0], # [X, Y, Z] for Elem 0...
-    [0, -14.55e-3, 0], # [X, Y, Z] for Elem 1...
-    [0, 14.55e-3, 0],
-    [0, 43.65e-3, 0],
+    [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
+    [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
+    [0,  (0.5)*elemSpacing, 0],
+    [0,  (1.5)*elemSpacing, 0],
 ]
 
 ## File location, as well as location relative to Array POV, facing out:
@@ -30,14 +31,14 @@ NICdata = [
     # Base Station Layout
     {   # NIC 1
         'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
-        0:      1,  # MAIN # TODO - ARE THE MAIN AND AUX CORRECTLY ASSIGNED BY THE PARSER?
-        1:      2,  # AUX
+        0:      1,  # AUX
+        1:      2,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
     {   # NIC 2
         'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
-        0:      0,  # MAIN
-        1:      3,  # AUX
+        0:      0,  # AUX
+        1:      3,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     }
 ]
@@ -62,8 +63,8 @@ NICdata = [
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
 toDS = 1; fromDS = 0
-#macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # Base Station MAC Address
-macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
+macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # Base Station MAC Address
+#macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
 forceAT = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
@@ -198,6 +199,7 @@ def alignMPDU(numNICS, loadedCSI):
         (list of picoscenes frames): Similar in shape to loadedCSI. `combinedCSI[0]` corresponds to the first correlated frame 
                                         between the NICs 
                                      Frames in each NIC CSI set with no MPDU matches are discarded.
+                                     [[frame0_NIC1, frame0_NIC2], [frame1_NIC1, frame1_NIC2], ...]
     """
     combinedCSI = []              # List to contain stitched-together CSI
     for frameOuter in loadedCSI[0].raw: # Iterate over the frames in the first NIC...
@@ -209,7 +211,7 @@ def alignMPDU(numNICS, loadedCSI):
             # Find all matches in this NIC
             matches = [
                 frameInner for frameInner in loadedCSI[nic_index].raw
-                if frameInner['MPDUS'][0][0:33] == mpduOuter[0][0:33] # TODO - USE !ONLY! IF USING HOTSPOT + MONITOR MODE CONFIG
+                if frameInner['MPDUS'][0][0:33] == mpduOuter[0][0:33] # TODO - USE [0:33] !ONLY! IF USING HOTSPOT + MONITOR MODE CONFIG
             ]   # ^^ Store `frameInner` for each match.
             # Add all found matches
             group.extend(matches)
@@ -222,6 +224,90 @@ def alignMPDU(numNICS, loadedCSI):
     #       (these could be empty packets that we don't care much about -- garbage. Those we care about have a unique MPDU b/c timestamp? etc.)
     print(f"Combined CSI! Total co-related CSI frames: {len(combinedCSI)}")
     return combinedCSI
+
+### SELF-ALIGN: PREPARE SINGLE CSI TRACE FOR FILTRATION ###
+def alignSingle(loadedCSI):
+    """ Gives identical output to `alignMPDU`, but with a single loaded CSI file.
+        Should simplify understanding of program flow. Makes it possible to use other 
+        filters of GOR! with single-shot CSI files.
+
+        This is primarily for outside scripts/filtration techniques, like for cal.
+
+    Args:
+        loadedCSI (picoscenes frames): Raw output from loadCSIfromRAW, given a SINGLE csi file.
+
+    Returns:
+        (list of picoscenes frames): [[frame0], [frame1], [frame2], ...]
+    """
+    # Assume single NIC. This is for use with outside scripts/filtration techniques.
+    # Original Filter of GOR doesn't need this (due to the `numNICS==1` override in `alignMPDU`)
+    arrangedCSI = []
+    for frame in loadedCSI.raw:
+        group = [frame]             # This...
+        arrangedCSI.append(group)   # Is a weird structure.
+
+    return arrangedCSI
+
+### FILTER FRAMES BY LOW RSSI ###
+def filterByRSSI(combinedCSI, minRSSI=None):
+    """ Filter frames via RSSI
+
+    Args:
+        combinedCSI (aligned CSI): Output of `alignSingle` or `alignMPDU`. List of picoscenes frames.
+        minRSSI (scalar, optional): Minimum RSSI (dB) that ALL traces must be greater than. 
+                                    If empty, determines average RSSI for each trace.
+                                    Recommend leaving empty. Defaults to None.
+
+    Returns:
+        (list of picoscenes frames): Similar in shape to `combinedCSI`. However, any sets of 
+                                    frames with RSSI 2dB below the average (or below commanded minRSSI)
+                                    are dropped. 
+    """
+    # Search for average RSSI in each trace:
+    if minRSSI is None:
+        rssiCSI = np.zeros((len(combinedCSI), 9)) # Picoscenes records 9 RSSI fields (for 3x3 MIMO)
+        for combIdx, combinedFrames in enumerate(combinedCSI):        # For all captured frames:
+            # Get the average RSSI between those combined frames:
+            _rssiSum = np.zeros((9))            # Store the running sum before averaging it.
+
+            for singleFrame in combinedFrames:    # For all singles in the combined frames:
+                _rssiSum[0] = _rssiSum[0] + singleFrame['RxSBasic']['rssi']
+                for trace in range(1, 9):   # The first one doesn't have a number.
+                    _rssiSum[trace] = _rssiSum[trace] + singleFrame['RxSBasic'][f"rssi{trace}"]
+            
+            rssiCSI[combIdx] = _rssiSum / len(combinedFrames) # Take the average via the sum, append to outer.
+        
+        minRSSI = np.mean(rssiCSI, axis=0) # e.g. [[-52, -58, -45,  -128, 0, 0,   0, 0, 0]]
+        print(f"Dicriminating against Average RSSI: {minRSSI}")
+        minRSSI = minRSSI - 2 # 2dB Threshold.
+
+    elif len(minRSSI) < 9:
+        # Make a scalar into a global discriminator.
+        minRSSI = np.repeat(minRSSI, 9)
+
+    # Now, only return CSI with RSSI above minRSSI in at least one dimension.
+    rssiFilteredCSI = []
+    for combinedFrames in combinedCSI:
+        # Find all frames meeting the minimum RSSI: (ugly but understandable)
+        matches = [
+            singleFrame for singleFrame in combinedFrames
+            if (((minRSSI[0] == 0) or (singleFrame['RxSBasic']['rssi'] >= minRSSI[0]))    and \
+                ((minRSSI[1] == 0) or (singleFrame['RxSBasic'][f"rssi{1}"] >= minRSSI[1])) and \
+                ((minRSSI[2] == 0) or (singleFrame['RxSBasic'][f"rssi{2}"] >= minRSSI[2])) and \
+                ((minRSSI[3] == 0) or (singleFrame['RxSBasic'][f"rssi{3}"] >= minRSSI[3])) and \
+                ((minRSSI[4] == 0) or (singleFrame['RxSBasic'][f"rssi{4}"] >= minRSSI[4])) and \
+                ((minRSSI[5] == 0) or (singleFrame['RxSBasic'][f"rssi{5}"] >= minRSSI[5])) and \
+                ((minRSSI[6] == 0) or (singleFrame['RxSBasic'][f"rssi{6}"] >= minRSSI[6])) and \
+                ((minRSSI[7] == 0) or (singleFrame['RxSBasic'][f"rssi{7}"] >= minRSSI[7])) and \
+                ((minRSSI[8] == 0) or (singleFrame['RxSBasic'][f"rssi{8}"] >= minRSSI[8])))
+        ]
+
+        # Only add `matches` if we have any matches
+        if (len(matches) > 0):
+            rssiFilteredCSI.append(matches)
+
+    print(f"Filtered by RSSI! Total CSI frames remaining: {len(rssiFilteredCSI)}")
+    return rssiFilteredCSI
 
 ### FILTER ToDS AND FromDS || MAC ADDRESS ALIGNMENT ###
 def filterSrcDest(combinedCSI, toDS, fromDS, macBS, macUT):
@@ -380,6 +466,33 @@ def filterForcedParams(macAlignedCSI, forceAT=0, forceAR=0):
 
     print(f"Force-Filter Complete. Total CSI frames remaining: {len(forcedCSI)}")
     return forcedCSI
+
+### CONVERT DATA FROM SINGLE NIC TO USABLE MATRIX ###
+def convertSingToUsableMatrix(forcedCSI):
+    """ Convert Parsed CSI from Single NIC to Usable Matrix
+        This is made for ease of use with external scripts.
+        This is really just a wrapper for `convertToUsableMatrix`, which requires
+           a `NICdata` object to operate.
+
+    Args:
+        forcedCSI (list of picoscenes frames): Output similar to `filterForcedParams` or `filterSrcDest`
+
+    Returns:
+        (Tuple): [outputMatrix, centerFreq_arr, chanBW_arr]
+        (Numpy Matrix [AT, AR, S, K]): AT ~ Number of TX Ants, AR ~ Num of RX Ants, 
+                                        S ~ Number of Subcarriers, K ~ Number of Frames
+        (centerFreq_arr, chanBW_arr): Arrays corresponding to the freq/chanBW of each relevant frame
+    """
+    # Prep NICdata to simplify single NIC data extraction.
+    NICdata = [
+        {
+            0:  0,
+            1:  1,
+            'mac': forcedCSI[0][0]['RxExtraInfo']['macaddr_cur'],
+        }
+    ]
+
+    return convertToUsableMatrix(forcedCSI, NICdata)
 
 ### CONVERT TO USABLE MATRIX ###
 def convertToUsableMatrix(forcedCSI, NICdata):
