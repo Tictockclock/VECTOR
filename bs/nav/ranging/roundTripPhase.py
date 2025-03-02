@@ -1,6 +1,6 @@
 '''
 Implements Round Trip Phase Method
-Similar to Decimeter-Level Ranging Paper (Insert Link Here)
+https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=10274424
 
 Goran Gjorgievski, 2/18/25
 '''
@@ -50,41 +50,6 @@ How do we get this information?
       we store this in a final array, called "d_rtp_array"
     - from here, we can plot the results of "d_rtp_array"
 
-
-'''
-
-'''
-
-numpy is imported. do we need to import matplotlib.pyplot?
-
-c = 3*10**8 # speed of light in m/s
-fc = 2412 * 10**6 # carrier frequency in Hz (2142 MHz)
-
-
-frames = ? # number of frames
-# ^ need help with this
-
-# Iterate through each frame to extract and multiply the CSI values
-for i in range(frames):
-   
-    H_AP_extracted_values[i] = H_AP[i]
-    H_STA_extracted_values[i] = H_STA[i]
-    
-    # Multiply the CSI values for the current frame
-    H_RT[i] = H_AP_extracted[i] * H_STA_extracted[i]
-
-# Iterate over H_RT array to compute the angle for each value
-for i in range(frames):
-    # Calculate the angle of the product for the current frame
-    H_RT_angle = np.angle(H_RT[i])*180/pi # Convert from rad to degrees
-    
-# Calculate d_rtp for each angle 
-    d_rtp_array[i] = -1/2 * (H_RT_angle / (2 * np.pi)) * (c / fc)
-
-
-'''
-
-'''
 - first step is to assign the shape of Hest_BS to a variable with np.shape(Hest_BS)
     - test = np.shape(Hest_BS)
 - we can assign a variable K to the number of frames in Hest_BS
@@ -97,7 +62,6 @@ for i in range(frames):
 - run Hest_BS[1,1,test3,0] to output the complex number
     - similarly, we can just run H_RT_angle = np.angle(Hest_BS[1,1,test3,0])*180/np.pi to output the answer in degrees
 - lastly, plug H_RT_angle into equation d_rtp_array[i] = -1/2 * (H_RT_angle / (2 * np.pi)) * (c / fc)
-
 '''
 
 # Global variables
@@ -128,8 +92,12 @@ H_RT = Hest_BS[0,1,centerFreqFrame_BS,:minK] * Hest_UT[0,1,centerFreqFrame_UT,:m
 # Get the angle in radians for each frame in H_RT
 H_RT_angle = np.angle(H_RT)
 
+# Unwrap the phase to remove phase wrapping
+H_RT_angle_unwrapped = np.unwrap(H_RT_angle)
+#import pdb; pdb.set_trace()
+
 # Each frame of H_RT applied to distance equation
-d_rtp_array = -1/2 * (H_RT_angle / (2 * np.pi)) * (c / fc)
+d_rtp_array = -1/2 * (H_RT_angle_unwrapped / (2 * np.pi)) * (c / fc)
 
 # Plotting
 import matplotlib.pyplot as plt

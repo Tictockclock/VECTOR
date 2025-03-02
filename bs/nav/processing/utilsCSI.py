@@ -18,7 +18,7 @@ import os                           # To retrive files
 
 #################################################################################
 ############################# FUNCTIONS #########################################
-def loadCSIfromMAT(csiPath=None):
+def loadCSIfromMAT(csiPath=""):
     """ Load Parsed CSI from .mat file 
 
     Args:
@@ -35,11 +35,12 @@ def loadCSIfromMAT(csiPath=None):
         
         ]: Tuple with variables of interest.
     """
-    if (not os.path.isfile(csiPath)) and (not (csiPath is None)):
+    initialdir = os.getcwd() # Get the default
+    if (not os.path.isfile(csiPath)) and (not (csiPath is "")):
         print(f"File path invalid for csiPath. Bringing up GUI dialog.")
         initialdir = os.path.dirname(csiPath) # We have the directory name for the CSI Path, if it's invalid.
 
-    if (csiPath is None) or (not os.path.isfile(csiPath)):
+    if (csiPath is "") or (not os.path.isfile(csiPath)):
         # Do GUI interface if path not specified
         # Ask the user to select a single file name.
         csiPath = filedialog.askopenfilename(initialdir=initialdir,
