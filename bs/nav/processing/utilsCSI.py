@@ -35,10 +35,14 @@ def loadCSIfromMAT(csiPath=None):
         
         ]: Tuple with variables of interest.
     """
-    if csiPath is None:
+    if (not os.path.isfile(csiPath)) and (not (csiPath is None)):
+        print(f"File path invalid for csiPath. Bringing up GUI dialog.")
+        initialdir = os.path.dirname(csiPath) # We have the directory name for the CSI Path, if it's invalid.
+
+    if (csiPath is None) or (not os.path.isfile(csiPath)):
         # Do GUI interface if path not specified
         # Ask the user to select a single file name.
-        csiPath = filedialog.askopenfilename(initialdir=os.getcwd(),
+        csiPath = filedialog.askopenfilename(initialdir=initialdir,
                                             title="Please select the CSI Source File:",
                                             filetypes=[('mat files', '.mat'), ('all files', '.*')])
     # Load in the Matlab File
