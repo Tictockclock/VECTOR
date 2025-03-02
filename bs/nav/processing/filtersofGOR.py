@@ -13,7 +13,7 @@ Dimitry Melnikov, 2/25/25
 ################# USER INPUTS ##################################
 ### ARRAY GEOMETRY
 # Element Positions
-elemSpacing = 0.086112 # 0.7 Lambda?
+elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
 elemPos = [ # Base Station Layout
     [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
     [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
