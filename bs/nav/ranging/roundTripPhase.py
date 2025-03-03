@@ -65,7 +65,7 @@ How do we get this information?
 '''
 
 # Global variables
-c = 3.8e8 # speed of light
+c = 3e8 # speed of light
 fc = 2.412e9 # center frequency 2412 MHz
 
 # Assign the shape of Hest_BS and Hest_UT to a variable
