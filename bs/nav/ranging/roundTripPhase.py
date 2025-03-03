@@ -15,11 +15,11 @@ import setup; setup.loadModules()
 import bs.nav.processing.utilsCSI as utilsCSI       # To import CSI from .mats
 import bs.demo.graphing.plotCSI as plotCSI          # To plot manipulated CSI
 
-[Hest_BS, centerFreq_BS, chanBW_BS, elemPos_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT()
-[Hest_UT, centerFreq_UT, chanBW_UT, elemPos_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT()
+[Hest_BS, centerFreq_BS, chanBW_BS, elemPos_BS, subcFreq_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT()
+[Hest_UT, centerFreq_UT, chanBW_UT, elemPos_UT, subcFreq_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT()
 
-plotCSI.plot2DCSI(Hest_BS, centerFreq_BS, chanBW_BS, title="CSI from BS", doUnwrap=True)
-plotCSI.plot2DCSI(Hest_UT, centerFreq_UT, chanBW_UT, title="CSI from UT", doUnwrap=True)
+plotCSI.plot2DCSI(Hest_BS, subcFreq_BS, title="CSI from BS", doUnwrap=True)
+plotCSI.plot2DCSI(Hest_UT, subcFreq_UT, chanBW_UT, title="CSI from UT", doUnwrap=True)
 
 
 
@@ -79,8 +79,8 @@ K_UT = shape_UT[3]
 minK = np.min([K_BS, K_UT]) # This assigns both K_BS and K_UT to the minimum number of frames between the two 
 
 # Extract the exact position in the array where the particular carrier frequency is 2412 MHz (This is our center freq)
-subcFreq_BS = utilsCSI.getSubcFreq(centerFreq_BS,chanBW_BS,shape_BS[2])
-subcFreq_UT = utilsCSI.getSubcFreq(centerFreq_UT,chanBW_UT,shape_UT[2])
+# Don't need -- already extracted. subcFreq_BS = utilsCSI.getSubcFreq(centerFreq_BS,chanBW_BS,shape_BS[2])
+#subcFreq_UT = utilsCSI.getSubcFreq(centerFreq_UT,chanBW_UT,shape_UT[2])
 
 # Pull out the frame associated with 2412 MHz
 centerFreqFrame_BS = np.where(subcFreq_BS == 2.412e9)

@@ -28,20 +28,19 @@ import bs.nav.processing.utilsCSI as utilsCSI
 
 ####### FILES #####################################################################
 
-def plot2DCSI(Hest, centerFreq, chanBW, \
+def plot2DCSI(Hest, subcFreq, \
               title="CSI Phase vs. Subcarriers", doUnwrap=True):
     """ Plots CSI Phase in 2D Plot with Slider over Snapshots
 
     Args:
         Hest (Numpy Matrix): Size [AT, AR, S, K], for [Num TX Ants, Num RX Ants, Num Subcarriers, Num Snapshots]
-        centerFreq (integer): Center/Carrier Frequency (Hz)
-        chanBW (integer): Channel Bandwidth (Hz)
+        subcFreq (Numpy Arr): Size (S). Gives Subcarrier Frequencies (Hz) corresponding to S.
         doUnwrap (bool, optional): Unwrap Phase. Defaults to True.
     """
     fig, ax = plt.subplots(figsize=(10, 6))
     plt.subplots_adjust(bottom=0.2)
 
-    # Extract Subcarrier Frequencies & Other Constants
+    # Extract Dimensions, resize if necessary.
     if (len(np.shape(Hest)) == 3):
         # Single [AT AR S] frame, need to stretch it to plot it.
         [AT, AR, S] = np.shape(Hest); K = 1
@@ -51,8 +50,9 @@ def plot2DCSI(Hest, centerFreq, chanBW, \
 
     else:
         [AT, AR, S, K] = np.shape(Hest)
-    
-    subcFreq = utilsCSI.getSubcFreq(centerFreq, chanBW, S)
+
+    if len(np.shape(subcFreq)) > 1:
+        subcFreq = subcFreq[0]
 
     # Set up colors
     # Colormap for each AT
@@ -94,7 +94,35 @@ def plot2DCSI(Hest, centerFreq, chanBW, \
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
-    plt.show()
+    plt.show()  
+
+def plot2DCSI_CFBW(Hest, centerFreq, chanBW, \
+              title="CSI Phase vs. Subcarriers", doUnwrap=True):
+    """ Plots CSI Phase in 2D Plot with Slider over Snapshots
+        Wrapper for `plot2DCSI` (estimates subcarrier frequencies via the inputs)
+    
+    Args:
+        Hest (Numpy Matrix): Size [AT, AR, S, K], for [Num TX Ants, Num RX Ants, Num Subcarriers, Num Snapshots]
+        centerFreq (integer): Center/Carrier Frequency (Hz)
+        chanBW (integer): Channel Bandwidth (Hz)
+        doUnwrap (bool, optional): Unwrap Phase. Defaults to True.
+    """
+    # Estimate Subcarrier Frequencies & Other Constants
+    
+    if (len(np.shape(Hest)) == 3):
+        # Single [AT AR S] frame, need to stretch it to plot it.
+        [AT, AR, S] = np.shape(Hest); K = 1
+        pltHest = np.zeros((AT, AR, S, K), dtype=np.complex128)
+        pltHest[:, :, :, 0] = Hest
+        Hest = pltHest # Override
+
+    else:
+        [AT, AR, S, K] = np.shape(Hest)
+
+    subcFreq = utilsCSI.getSubcFreq(centerFreq, chanBW, S)
+
+    plot2DCSI(Hest, subcFreq.T, title, doUnwrap)
+
 
 def plotMACDEST(currCSI=None, NICnum=0, csiPath=None):
     """ Plots Source/Destinations for captured packets in raw CSI.
