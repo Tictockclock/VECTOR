@@ -11,41 +11,41 @@ Dimitry Melnikov, 2/25/25
 
 ################################################################
 ################# USER INPUTS ##################################
-# ### ARRAY GEOMETRY
-# # Element Positions
-# elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
-# elemPos = [ # Base Station Layout
-#     [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
-#     [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
-#     [0,  (0.5)*elemSpacing, 0],
-#     [0,  (1.5)*elemSpacing, 0],
-# ]
-
-# ## File location, as well as location relative to Array POV, facing out:
-# #               0             1               2              3
-# #         (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
-# # AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
-# # NIC 2 is represented by being placed second in `NICdata`
-# datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
-# NICdata = [
-#     # Base Station Layout
-#     {   # NIC 1
-#         'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
-#         0:      1,  # AUX
-#         1:      2,  # MAIN
-#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-#     },
-#     {   # NIC 2
-#         'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
-#         0:      0,  # AUX
-#         1:      3,  # MAIN
-#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-#     }
-# ]
-
 ## ARRAY GEOMETRY
 # Element Positions
+elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
+elemPos = [ # Base Station Layout
+    [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
+    [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
+    [0,  (0.5)*elemSpacing, 0],
+    [0,  (1.5)*elemSpacing, 0],
+]
+
+# File location, as well as location relative to Array POV, facing out:
+#              0             1               2              3
+#        (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
+#AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
+#NIC 2 is represented by being placed second in `NICdata`
 datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
+NICdata = [
+    # Base Station Layout
+    {   # NIC 1
+        'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
+        0:      1,  # AUX
+        1:      2,  # MAIN
+        'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+    },
+    {   # NIC 2
+        'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
+        0:      0,  # AUX
+        1:      3,  # MAIN
+        'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+    }
+]
+
+# ## ARRAY GEOMETRY
+# # Element Positions
+# datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
 # elemPos = [ # Base Station Layout
 #     [0, -43.65e-3, 0], # [X, Y, Z] for Elem 0...
 #     [0, -14.55e-3, 0], # [X, Y, Z] for Elem 1...
@@ -74,31 +74,31 @@ datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-
 #     }
 # ]
 
-# NIC DATA & Element Positions for Laptop/UT Setup
-# Element Positions
-elemPos = [ # Laptop Layout (Estimated)
-    [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
-    [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
-]
+# # NIC DATA & Element Positions for Laptop/UT Setup
+# # Element Positions
+# elemPos = [ # Laptop Layout (Estimated)
+#     [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
+#     [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
+# ]
 
-NICdata = [
-    {   # NIC 1
-        'file':  "",
-        0:      1,  # AUX
-        1:      0,  # MAIN
-        'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-    },
-]
+# NICdata = [
+#     {   # NIC 1
+#         'file':  "9 ft to 14 ft boresight",
+#         0:      1,  # AUX
+#         1:      0,  # MAIN
+#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+#     },
+# ]
 
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
-toDS = 0; fromDS = 1
-#macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
-macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Old Setup) Base Station MAC Address
+toDS = 1; fromDS = 0
+macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
+#macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Old Setup) Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # User Terminal MAC Address (antenna we're tracking)
 
-forceAT = 1    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
+forceAT = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
 
 ################################################################
@@ -546,6 +546,7 @@ def convertToUsableMatrix(forcedCSI, NICdata):
     outputMatrix    = [] # Output [AT AR S K] Matrix
     centerFreq_arr  = [] # Center Frequency
     chanBW_arr      = [] # Channel Bandwidth
+    subcFreq_arr    = [] # Subcarrier Frequencies (Hz)
 
     numNICS = len(NICdata)
 
@@ -559,6 +560,7 @@ def convertToUsableMatrix(forcedCSI, NICdata):
         S  = firstCSIFrame['numTones']      # Number of Subcarriers Tracked
         centerFreq_arr.append(float(firstCSIFrame['CarrierFreq'])) # Given in Hz
         chanBW_arr.append(float(firstCSIFrame['CBW']*1e6))        # Channel BW given in MHz, convert to Hz
+        subcFreq_arr.append(utilsCSI.getSubcFreqFromCSI(alignedFrames[0])) # Subcarrier Frequencies (Hz)
 
         ATARSframe = np.zeros((AT, AR, S), dtype=np.complex128)
 
@@ -604,9 +606,10 @@ def convertToUsableMatrix(forcedCSI, NICdata):
     # With all frames deposited in the first dimension, want to permute them to fit the output expectations
     # [(K) AT AR S] -> [AT AR S (K)]
     print(f"Output Matrix (numTX, numRX, numSubcarriers, numSnapshots) ~ {np.shape(trimmedOutputMatrix)}")
-    return [trimmedOutputMatrix, centerFreq_arr, chanBW_arr]
+    return [trimmedOutputMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr]
 
-def saveCSItoMAT(outputMatrix, centerFreq, chanBW, elemPos, outputFilename, outputFolder=None):
+def saveCSItoMAT(outputMatrix, centerFreq, chanBW, subcFreq, elemPos, \
+                 outputFilename, outputFolder=None):
     """ Save processed CSI to .mat file.
 
     Sample `elemPos`:
@@ -622,6 +625,7 @@ def saveCSItoMAT(outputMatrix, centerFreq, chanBW, elemPos, outputFilename, outp
         outputMatrix (numpy matrix [AT, AR, S, K]]): Output from `convertToUsableMatrix`. Homogeneous.
         centerFreq (float): _description_
         chanBW (float): _description_
+        subcFreq (list): List of Size S mapping each (S)ubcarrier index to a Frequency. Should be pulled off of collected CSI
         elemPos (struct): Struct corresponding to element position for elements 0, 1, 2, 3..
         outputFilename (str): Output filename (not path, no suffix either)
         outputFolder (str, optional): Absolute path to output folder. Defaults to None.
@@ -641,6 +645,8 @@ def saveCSItoMAT(outputMatrix, centerFreq, chanBW, elemPos, outputFilename, outp
         'centerFreq':       centerFreq,   
         # Channel Bandwidth (Hz)
         'chanBW':           chanBW,
+        # Subcarrier Frequencies (Hz) (Correspond to each S)
+        'subcFreq':         subcFreq,
         # RX Antenna Element Positions
         'elemPos':          elemPos,
     }   # Output Dictionary to shove things into
@@ -676,11 +682,11 @@ def parseMultiNIC(elemPos, NICdata,
     forcedCSI = filterForcedParams(macAlignedCSI, forceAT, forceAR)
 
     print("Converting to usable matrix...")
-    [outputMatrix, centerFreq_arr, chanBW_arr] = convertToUsableMatrix(forcedCSI, NICdata)
+    [outputMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] = convertToUsableMatrix(forcedCSI, NICdata)
 
     print("Saving CSI to .mat file...")  
     outputFilename = os.path.basename(os.path.dirname(csiPath)) # Output filename is the same as old directory
-    filepath = saveCSItoMAT(outputMatrix, centerFreq=centerFreq_arr[0], chanBW=chanBW_arr[0], \
+    filepath = saveCSItoMAT(outputMatrix, centerFreq=centerFreq_arr[0], chanBW=chanBW_arr[0], subcFreq=subcFreq_arr[0], \
                             elemPos=elemPos, outputFilename=outputFilename)
 
 
