@@ -53,7 +53,7 @@ def loadCSIfromMAT(csiPath=""):
     Hest            = loadedStruct['outputMatrix']  # CSI Itself [AT AR S K]
     centerFreq      = loadedStruct['centerFreq']    # Center/Carrier Frequency for collected CSI (Hz)
     chanBW          = loadedStruct['chanBW']        # Channel Bandwidth (Hz)
-    subcFreq        = loadedStruct['subcFreq']      # Subcarrier Frequencies (Hz)
+    subcFreq        = loadedStruct['subcFreq'][0]   # Subcarrier Frequencies (Hz)
     elemPos         = loadedStruct['elemPos']       # Positions for each element [[X0, Y0, Z0], [X1, Y1, Z1], ...]
 
     return [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath]

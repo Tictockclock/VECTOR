@@ -21,7 +21,7 @@ Dimitry Melnikov, 2/24/25
 
 #################################################################################
 ############################# USER INPUTS #######################################
-calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/CAL/"
+calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/3-2-25/CAL/"
 saveCalToMat = False
 
 NICdata = [
@@ -38,8 +38,8 @@ NICdata = [
 ]
 
 toDS = 1; fromDS = 0
-macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # Base Station MAC Address
-macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # MAC Address for reference-NIC
+macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (21) Base Station MAC Address
+macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (23) MAC Address for reference-NIC
 
 #################################################################################
 ############################## IMPORTS ##########################################
@@ -138,6 +138,7 @@ def getElemMapping(NICdata):
 
 def parseCalCSI(loadedCalCSI, NICdata, 
                 toDS, fromDS, macBS, macREF):
+    # Assume all NICdata is homogeneous
     # loadedCalCSI ~ [[CSI for Elem 0], [CSI for Elem 1], ... [CSI for Elem AR-1]]
     AR = len(loadedCalCSI)
     parsedCalCSI = []
@@ -153,13 +154,13 @@ def parseCalCSI(loadedCalCSI, NICdata,
         currCalCSI = filtersofGOR.filterSrcDest(currCalCSI, 
                                                 toDS, fromDS, macBS, macREF)
         # Convert the frames to something useful:
-        [currCalMatrix, centerFreq_arr, chanBW_arr] \
+        [currCalMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
                    = filtersofGOR.convertSingToUsableMatrix(currCalCSI) # NICdata deposits the trace in the right place.
         # Average the Frames
-        avgPhase = np.mean(np.angle(currCalMatrix), axis=3) # Average over time (K axis)
+        avgCalMatrix = np.mean(currCalMatrix, axis=3) # Average over time (K axis)
         # We have [AT, AR, S] -> [0 (first transmitter), ar (current element), : (all subcarriers)]
         currAnt = elemMapping[ar] # Get AUX/MAIN assignment from elemMapping (via NICdata)
-        currCalValue = np.exp(1j*avgPhase[0, currAnt, :])
+        currCalValue = avgCalMatrix[0, currAnt, :]
         # Append averaged CSI as [AT AR S] frame
         parsedCalCSI.append(currCalValue)
 
@@ -169,45 +170,64 @@ def parseCalCSI(loadedCalCSI, NICdata,
     calMatrix = 1/calMatrix # If we multiply by `outputMatrix`, we want to 'cancel it out'
 
     #plotCSI.plotMACDEST(currCalCSI)
-    #plotCSI.plot2DCSI(calMatrix, centerFreq_arr[0], chanBW_arr[0])
+    plotCSI.plot2DCSI(calMatrix, subcFreq_arr[0])
     print(f"Calibration Matrix Complete! [AT, AR, S, K] ~ {np.shape(calMatrix)}")
 
-    return [calMatrix, centerFreq_arr, chanBW_arr]
+    return [calMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr]
 
-def applyCalOffset(calMatrix, csiPath):
+def applyCalOffset(calMatrix, calSubcFreq, csiPath):
     print("Select Uncalibrated CSI from the same dataset")
     # Load Pre-Parsed CSI:
-    [Hest, centerFreq, chanBW, elemPos, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath)
+    [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath)
     [AT, AR, S, K] = np.shape(Hest)
 
-    # Check to see if the number of subcarriers changed (this might be a problem?)
-    if S > np.shape(calMatrix)[2]:
-        # TODO - We shouldn't have to do this... right?
-        # Pad with zeroes
-        calS = np.shape(calMatrix)[2]
-        print(f"WARNING! INCOMING S: {S} vs. CAL S: {calS}. RESIZING BY PADDING.")
-        calMatrixPadded = np.zeros((AT, AR, S, 1), dtype=np.complex128)
-        
-        # Indices for padding:
-        startPad = (S - calS) // 2;
-        calMatrixPadded[:, :, startPad:(calS + startPad), :] = calMatrix
-        calMatrix = calMatrixPadded 
-    
+    # Check to see if the subcarriers are the same.
+
+    # Duplicate to extend axes.
+    calMatrixMult = np.repeat(calMatrix, K, axis=3) # Want to apply to all K frames
+
+    # Apply to each AT trace"
     if AT > np.shape(calMatrix)[0]:
         # Duplicate along axis.
-        numReps = AT - np.shape(calMatrix)[0]
-        calMatrix = np.repeat(calMatrix, numReps, axis=0)
+        numReps = AT - np.shape(calMatrixMult)[0]
+        calMatrixMult = np.repeat(calMatrixMult, numReps + 1, axis=0)
+
+    if ((np.shape(subcFreq) != np.shape(calSubcFreq)) or (np.equals(subcFreq, calSubcFreq))):
+        print(f"WARNING! INCOMING SUBCARRIER FREQUENCIES DIFFERENT FROM CALIBRATION.")
+        print(f"RESIZING THE LARGER CHANNEL MATRIX")
+
+        if (len(subcFreq) < len(calSubcFreq)):
+            print("TRUNCATING CALIBRATION MATRIX")
+            Hest_min = Hest;                subcFreq_min = subcFreq
+            Hest_max = calMatrixMult;       subcFreq_max = calSubcFreq
+        else:
+            print("TRUNCATING INCOMING MATRIX")
+            Hest_min = calMatrixMult;       subcFreq_min = calSubcFreq
+            Hest_max = Hest;                subcFreq_max = subcFreq
+
+        Hest_new = np.zeros(np.shape(Hest_min), dtype=np.complex128)
+
+        for s_min in range(len(subcFreq_min)):
+            for s_max in range(len(subcFreq_max)):
+                if (subcFreq_min[s_min] == subcFreq_max[s_max]):
+                    # Put the larger one into the smaller one.
+                    Hest_new[:, :, s_min, :] = Hest_max[:, :, s_max, :]
+                    continue
+        
+        if (len(subcFreq) < len(calSubcFreq)):
+            calMatrixMult = Hest_new;   calSubcFreq = subcFreq_min
+        else:
+            Hest   = Hest_new;          subcFreq    = subcFreq_min
 
     # Apply Offset:
-    calMatrixMult = np.repeat(calMatrix, K, axis=3) # Want to apply to all K frames
     correctedCSI = Hest * calMatrixMult
 
     # Show user:
-    plotCSI.plot2DCSI(correctedCSI, centerFreq, chanBW, title="CSI Post-Calibration", doUnwrap=True)
+    plotCSI.plot2DCSI(correctedCSI, subcFreq, title="CSI Post-Calibration", doUnwrap=True)
 
     # Save to .mat file:
     corrFilename = os.path.splitext(os.path.basename(csiPath))[0] + "_POSTCAL"
-    filtersofGOR.saveCSItoMAT(correctedCSI, centerFreq, chanBW, elemPos, corrFilename)
+    filtersofGOR.saveCSItoMAT(correctedCSI, centerFreq, chanBW, subcFreq, elemPos, corrFilename)
 
 def generateCalOffset(NICdata, calFolder,
                       toDS, fromDS, macBS, macREF,
@@ -223,20 +243,20 @@ def generateCalOffset(NICdata, calFolder,
     # Load RAW .CSI files
     loadedCalCSI = loadCalCSIfromRAW(AR, calFolder)
     # Determine CSI for reference cable for each trace
-    [calMatrix, centerFreq_arr, chanBW_arr] \
+    [calMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
                  = parseCalCSI(loadedCalCSI, NICdata,
                                toDS, fromDS, macBS, macREF)
     # Save Cal Offset to Matlab file
     if saveCalToMat:
-        calPath = filtersofGOR.saveCSItoMAT(calMatrix, centerFreq_arr[0], chanBW_arr[0], [],
+        calPath = filtersofGOR.saveCSItoMAT(calMatrix, centerFreq_arr[0], chanBW_arr[0], subcFreq_arr[0], [],
                                             "calMatrix", calFolder)
     
-    return calMatrix
+    return [calMatrix, subcFreq_arr[0]]
 
 if __name__ == "__main__":
     # Calculate Calibration Coefficients
-    calMatrix = generateCalOffset(NICdata, calFolder,
+    [calMatrix, calSubcFreq] = generateCalOffset(NICdata, calFolder,
                       toDS, fromDS, macBS, macREF, saveCalToMat)
 
     # Apply Calibration Offset to parsed .mat file
-    applyCalOffset(calMatrix, calFolder)
+    applyCalOffset(calMatrix, calSubcFreq, calFolder)
