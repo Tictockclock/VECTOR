@@ -11,8 +11,18 @@ pico_process = None
 SUDO_PASSWORD = "123456"
 config = None
 CONFIG_PATH = "/home/dt12/Code/VECTOR/bs/config.json"
+CONFIG_PATH = "/home/dt12/Code/VECTOR/bs/config.json"
 
 def load_config():
+    """Load configuration from a JSON file.
+
+    Reads the configuration file specified by `CONFIG_PATH` and loads it into the global `config` variable.
+    If the file is not found or cannot be parsed, the program exits with an error.
+
+    Raises:
+        FileNotFoundError: If the configuration file does not exist.
+        json.JSONDecodeError: If the configuration file is not valid JSON.
+    """
     """Load configuration from a JSON file.
 
     Reads the configuration file specified by `CONFIG_PATH` and loads it into the global `config` variable.
@@ -58,7 +68,23 @@ def start_prepare_picoscenes():
         # Wait for process to complete, but enforce timeout
         proc.wait(timeout=float(config["picoscenes"]["timelimit"]))
         print("Command completed within time limit")
+    print("Running setup command:")
+    print(cmd)
+    #result = subprocess.run(cmd, shell=True)
+    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
+    try:
+        # Wait for process to complete, but enforce timeout
+        proc.wait(timeout=float(config["picoscenes"]["timelimit"]))
+        print("Command completed within time limit")
 
+    except subprocess.TimeoutExpired:
+        print(f"""Command did not complete within {config["picoscenes"]["timelimit"]} seconds""")
+        print("Forcing termination of the process group")
+        # Terminate entire process group
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
+        proc.wait() # Wait for termination to complete.
     except subprocess.TimeoutExpired:
         print(f"""Command did not complete within {config["picoscenes"]["timelimit"]} seconds""")
         print("Forcing termination of the process group")
@@ -78,13 +104,67 @@ def start_picoscenes():
         subprocess.TimeoutExpired: If the process does not complete within the time limit.
     """
 
+    """Start the PicoScenes application.
+
+    Launches PicoScenes as a subprocess using parameters from the global `config.json` file. If the
+    process does not complete within the specified time limit, it is forcefully terminated.
+
+    Raises:
+        subprocess.TimeoutExpired: If the process does not complete within the time limit.
+    """
+
     global pico_process
 
     # Start PicoScenes as a subprocess
     cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger;
         -i {config["picoscenes"]["monID2"]} --mode logger
         --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port"]}\""""
+    # Start PicoScenes as a subprocess
+    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger;
+        -i {config["picoscenes"]["monID2"]} --mode logger
+        --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port"]}\""""
 
+    print("Running injection command:")
+    print(cmd)
+    #result = subprocess.run(cmd, shell=True)
+    pico_process = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+
+    try:
+        # Wait for process to complete, but enforce timeout
+        pico_process.wait(timeout=float(config["picoscenes"]["timelimit"]))
+        print("Command completed within time limit")
+
+    except subprocess.TimeoutExpired:
+        print(f"""Command did not complete within {config["picoscenes"]["timelimit"]} seconds""")
+        print("Forcing termination of the process group")
+        # Terminate entire process group
+        os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
+        pico_process.wait() # Wait for termination to complete.
+
+
+def start_parsing():
+    """Handle parsing functionality.
+
+    This is a placeholder function for parsing logic. It runs in a loop until the `shutdown_event`
+    is set, allowing for graceful termination.
+    """
+    while not shutdown_event.is_set():
+        pass
+
+def hotspot_setup():
+    path = "/home/dt12/Code/VECTOR/bs/bash/setupbs.sh"
+    cmd = f"""sudo bash {path}
+    {config["setup"]["ap_interface"]}
+    {config["setup"]["monitor_interface"]}
+    {config["setup"]["reference_interface"]}
+    {config["setup"]["ssid"]} {config["setup"]["channel_number"]}
+    """
+    proc = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+
+    try:
+        # Wait for process to complete, but enforce timeout
+        proc.wait(timeout=float(config["picoscenes"]["timelimit"]))
+        print("Command completed within time limit")
     print("Running injection command:")
     print(cmd)
     #result = subprocess.run(cmd, shell=True)
@@ -161,7 +241,7 @@ def master_handler():
     Initializes and manages the base station's functionality, including preparing and running
     PicoScenes, parsing data, and handling graceful shutdowns via Ctrl+C.
     """
-    
+
     print("Base station is running. Press Ctrl+C to stop.")
 
     # parser = argparse.ArgumentParser(description="Client to send files or messages to the server.")
@@ -174,8 +254,13 @@ def master_handler():
     parsing_thread = threading.Thread(target=start_parsing)
     # pinging_thread = threading.Thread(target=pinging)
     # setup_thread = threading.Thread(target=hotspot_setup)
+    # pinging_thread = threading.Thread(target=pinging)
+    # setup_thread = threading.Thread(target=hotspot_setup)
 
     parsing_thread.start()
+
+    # setup_thread.start()
+    # setup_thread.join()
 
     # setup_thread.start()
     # setup_thread.join()
@@ -186,6 +271,7 @@ def master_handler():
     picoscenes_thread.start()
 
 
+
     def signal_handler(sig, frame):
         global pico_process
         print("\nShutting down server...")
@@ -194,7 +280,11 @@ def master_handler():
         # Send SIGINT to the PicoScenes subprocess
         if pico_process:
             os.killpg(os.getpgid(pico_process.pid), signal.SIGINT)
+            os.killpg(os.getpgid(pico_process.pid), signal.SIGINT)
             os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(pico_process.pid), signal.SIGKILL)
+
+            #pico_process.wait()  # Wait for the subprocess to terminate
             os.killpg(os.getpgid(pico_process.pid), signal.SIGKILL)
 
             #pico_process.wait()  # Wait for the subprocess to terminate

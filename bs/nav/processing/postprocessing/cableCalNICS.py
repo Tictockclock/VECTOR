@@ -13,7 +13,7 @@ Operator Procedure:
         - NIC0 Aux:  X0
         - NIC1 Main: M1
         - NIC1 Aux:  X1
-    
+
 
 (Driver Script)
 Dimitry Melnikov, 2/24/25
@@ -81,18 +81,18 @@ from tkinter import filedialog      # For file selection (GUI)
 #   (Remaining frames will contain CSI sent from the reference port)
     ### AVERAGE THE FRAMES ###
 #   Average the remaining frames along K
-#   
+#
 def loadCalCSIfromRAW(AR, calFolder=None):
     # Select CSI Folder
     if (calFolder is None) or (not os.path.isdir(calFolder)):
-        calFolder = filedialog.askdirectory(initialdir=os.getcwd(), 
+        calFolder = filedialog.askdirectory(initialdir=os.getcwd(),
                                                 title="Please select CSI cal Folder.")
 
     loadedCalCSI = []
 
     # Load CSI Associated with each element in the array
     for ar in range(AR):
-        [curCalCSI, _] = filtersofGOR.loadCSIfromRAW(calFolder, 
+        [curCalCSI, _] = filtersofGOR.loadCSIfromRAW(calFolder,
                                                      f"Please select CSI Source File for Element {ar}")
         loadedCalCSI.append(curCalCSI)
 
@@ -136,22 +136,24 @@ def getElemMapping(NICdata):
     return elemMapping
 
 
-def parseCalCSI(loadedCalCSI, NICdata, 
+def parseCalCSI(loadedCalCSI, NICdata,
                 toDS, fromDS, macBS, macREF):
     # Assume all NICdata is homogeneous
     # loadedCalCSI ~ [[CSI for Elem 0], [CSI for Elem 1], ... [CSI for Elem AR-1]]
     AR = len(loadedCalCSI)
     parsedCalCSI = []
 
-    elemMapping = getElemMapping(NICdata) # ew ew ew 
+    elemMapping = getElemMapping(NICdata) # ew ew ew
 
     for ar in range(AR):
         # For each NIC:
         currCalCSI = filtersofGOR.alignSingle(loadedCalCSI[ar])
+        plotCSI.plotMACDEST(currCalCSI)
+        import pdb; pdb.set_trace()
         # Remove Low RSSI Traces:
         currCalCSI = filtersofGOR.filterByRSSI(currCalCSI)
         # Filter by Source/Destination
-        currCalCSI = filtersofGOR.filterSrcDest(currCalCSI, 
+        currCalCSI = filtersofGOR.filterSrcDest(currCalCSI,
                                                 toDS, fromDS, macBS, macREF)
         # Convert the frames to something useful:
         [currCalMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
@@ -213,7 +215,7 @@ def applyCalOffset(calMatrix, calSubcFreq, csiPath):
                     # Put the larger one into the smaller one.
                     Hest_new[:, :, s_min, :] = Hest_max[:, :, s_max, :]
                     continue
-        
+
         if (len(subcFreq) < len(calSubcFreq)):
             calMatrixMult = Hest_new;   calSubcFreq = subcFreq_min
         else:
@@ -239,7 +241,6 @@ def generateCalOffset(NICdata, calFolder,
     print("The calculated calibration coefficients will make it such that each will exhibit close to 0deg.")
 
     AR = len(NICdata) * 2
-
     # Load RAW .CSI files
     loadedCalCSI = loadCalCSIfromRAW(AR, calFolder)
     # Determine CSI for reference cable for each trace
@@ -250,7 +251,7 @@ def generateCalOffset(NICdata, calFolder,
     if saveCalToMat:
         calPath = filtersofGOR.saveCSItoMAT(calMatrix, centerFreq_arr[0], chanBW_arr[0], subcFreq_arr[0], [],
                                             "calMatrix", calFolder)
-    
+
     return [calMatrix, subcFreq_arr[0]]
 
 if __name__ == "__main__":

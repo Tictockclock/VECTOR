@@ -11,6 +11,58 @@ Dimitry Melnikov, 2/25/25
 
 ################################################################
 ################# USER INPUTS ##################################
+datasetFolder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/2-25-25_Outside/3_BS_LAPTOP_OUTSIDE_73DEG_9ftX_3ftY/" # OPTIONAL! ABsolute path.
+################## PATCH ARRAY LAYOUT ####################################
+### ARRAY GEOMETRY
+# Element Positions
+elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
+elemPos = [ # Base Station Layout
+    [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
+    [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
+    [0,  (0.5)*elemSpacing, 0],
+    [0,  (1.5)*elemSpacing, 0],
+]
+
+## File location, as well as location relative to Array POV, facing out:
+#               0             1               2              3
+#         (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
+# AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
+# NIC 2 is represented by being placed second in `NICdata`
+datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
+NICdata = [
+    # Base Station Layout
+    {   # NIC 1
+        'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
+        0:      1,  # AUX
+        1:      2,  # MAIN
+        'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+    },
+    {   # NIC 2
+        'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
+        0:      0,  # AUX
+        1:      3,  # MAIN
+        'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+    }
+]
+
+# ########### LAPTOP LAYOUT ##################################
+# # NIC DATA & Element Positions for Laptop/UT Setup
+# # Element Positions
+# elemPos = [ # Laptop Layout (Estimated)
+#     [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
+#     [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
+# ]
+
+# NICdata = [
+#     {   # NIC 1
+#         'file':  "73 deg",
+#         0:      1,  # AUX
+#         1:      0,  # MAIN
+#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+#     },
+# ]
+
+######## OLD BASE STATION LAYOUT ######################
 ## ARRAY GEOMETRY
 # Element Positions
 elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
@@ -47,6 +99,7 @@ NICdata = [
 # # Element Positions
 # datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
 # elemPos = [ # Base Station Layout
+# elemPos = [ # (OLD) Base Station Layout
 #     [0, -43.65e-3, 0], # [X, Y, Z] for Elem 0...
 #     [0, -14.55e-3, 0], # [X, Y, Z] for Elem 1...
 #     [0, 14.55e-3, 0],
@@ -140,7 +193,7 @@ def loadCSIfromRAW(csiPath=None, selectionPrompt="Please select the CSI Source F
         csiPath = filedialog.askopenfilename(initialdir=initialdir,
                                             title=selectionPrompt,
                                             filetypes=[('csi files', '.csi'), ('all files', '.*')])
-    
+
     print(f"Loading CSI from: {csiPath}")
 
     return (Picoscenes(csiPath), csiPath) # Load in data
@@ -207,7 +260,7 @@ def loadMultiNICS(NICdata, datasetFolder=None):
 
     ### RECORD THE MAC ADDRESS ASSOCIATED WITH EACH NIC THAT COLLECTED CSI ###
     # Not to be confused with the BS/UT mac address - these addresses are baked into the CSI
-    #  (We use these in the final 'Matlab Conversion' section to make sure that the CSI comes 
+    #  (We use these in the final 'Matlab Conversion' section to make sure that the CSI comes
     #   from the right NIC, in case things get shifted around during filtering.)
     for nic_index in range(numNICS):
         NICdata[nic_index]['mac'] = loadedCSI[nic_index].raw[0]['RxExtraInfo']['macaddr_cur']
@@ -227,15 +280,15 @@ def alignMPDU(numNICS, loadedCSI):
         loadedCSI (list of picoscenes frames): Array of Picoscenes dictionaries. Returned directly by loadMultiNICS
 
     Returns:
-        (list of picoscenes frames): Similar in shape to loadedCSI. `combinedCSI[0]` corresponds to the first correlated frame 
-                                        between the NICs 
+        (list of picoscenes frames): Similar in shape to loadedCSI. `combinedCSI[0]` corresponds to the first correlated frame
+                                        between the NICs
                                      Frames in each NIC CSI set with no MPDU matches are discarded.
                                      [[frame0_NIC1, frame0_NIC2], [frame1_NIC1, frame1_NIC2], ...]
     """
     combinedCSI = []              # List to contain stitched-together CSI
     for frameOuter in loadedCSI[0].raw: # Iterate over the frames in the first NIC...
         mpduOuter = frameOuter['MPDUS'] # Extract MPDU to search for
-        
+
         group = [frameOuter]            # Group of matched MPDUs
 
         for nic_index in range(1, numNICS): # Skip the first NIC since we're accessing it from the top
@@ -259,7 +312,7 @@ def alignMPDU(numNICS, loadedCSI):
 ### SELF-ALIGN: PREPARE SINGLE CSI TRACE FOR FILTRATION ###
 def alignSingle(loadedCSI):
     """ Gives identical output to `alignMPDU`, but with a single loaded CSI file.
-        Should simplify understanding of program flow. Makes it possible to use other 
+        Should simplify understanding of program flow. Makes it possible to use other
         filters of GOR! with single-shot CSI files.
 
         This is primarily for outside scripts/filtration techniques, like for cal.
@@ -285,14 +338,14 @@ def filterByRSSI(combinedCSI, minRSSI=None):
 
     Args:
         combinedCSI (aligned CSI): Output of `alignSingle` or `alignMPDU`. List of picoscenes frames.
-        minRSSI (scalar, optional): Minimum RSSI (dB) that ALL traces must be greater than. 
+        minRSSI (scalar, optional): Minimum RSSI (dB) that ALL traces must be greater than.
                                     If empty, determines average RSSI for each trace.
                                     Recommend leaving empty. Defaults to None.
 
     Returns:
-        (list of picoscenes frames): Similar in shape to `combinedCSI`. However, any sets of 
+        (list of picoscenes frames): Similar in shape to `combinedCSI`. However, any sets of
                                     frames with RSSI 2dB below the average (or below commanded minRSSI)
-                                    are dropped. 
+                                    are dropped.
     """
     # Search for average RSSI in each trace:
     if minRSSI is None:
@@ -305,9 +358,9 @@ def filterByRSSI(combinedCSI, minRSSI=None):
                 _rssiSum[0] = _rssiSum[0] + singleFrame['RxSBasic']['rssi']
                 for trace in range(1, 9):   # The first one doesn't have a number.
                     _rssiSum[trace] = _rssiSum[trace] + singleFrame['RxSBasic'][f"rssi{trace}"]
-            
+
             rssiCSI[combIdx] = _rssiSum / len(combinedFrames) # Take the average via the sum, append to outer.
-        
+
         minRSSI = np.mean(rssiCSI, axis=0) # e.g. [[-52, -58, -45,  -128, 0, 0,   0, 0, 0]]
         print(f"Dicriminating against Average RSSI: {minRSSI}")
         minRSSI = minRSSI - 2 # 2dB Threshold.
@@ -344,7 +397,7 @@ def filterByRSSI(combinedCSI, minRSSI=None):
 def filterSrcDest(combinedCSI, toDS, fromDS, macBS, macUT):
     """ Filter co-related frames in `combinedCSI` by the intended Source/Destinations
     (Filter ToDS AND FromDS ||| MAC ADDRESS ALIGNMENT)
-    (For cards in Monitor mode, ALL frames are being collected -- we only wish to 
+    (For cards in Monitor mode, ALL frames are being collected -- we only wish to
      collect CSI from 'real' data)
 
     Sample inputs:
@@ -362,14 +415,14 @@ def filterSrcDest(combinedCSI, toDS, fromDS, macBS, macUT):
         macUT (_type_): User Terminal MAC Address
 
     Returns:
-        (list of picoscenes frames): Similar in shape to `combinedCSI`. However, any sets of 
+        (list of picoscenes frames): Similar in shape to `combinedCSI`. However, any sets of
                                     frames not matching inputs toDS/fromDS criteria are dropped.
     """
     # Configure the correct expected source/destination MAC addresses
     # (Furthermore, make sure no changes in MCS occur)
     # Info: https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
     if (toDS == 1) and (fromDS == 0): # toDS = 1, fromDS = 0
-        macSRC = macUT; macDEST = macBS # Sending from UT to BS 
+        macSRC = macUT; macDEST = macBS # Sending from UT to BS
     else:             # toDS = 0, fromDS = 1 (or other cases)
         macSRC = macBS; macDEST = macUT # Sending from BS to UT
 
@@ -385,7 +438,7 @@ def filterSrcDest(combinedCSI, toDS, fromDS, macBS, macUT):
         ]   # Only return frames that match ALL of the fields.
 
         # Only add `matches` if we have any matches.
-        if (len(matches) > 0): 
+        if (len(matches) > 0):
             # Make sure the Modulation & Coding Scheme is consistent (MCS stays constant)
             firstMCS = matches[0]['RxSBasic']['MCS']
             matchesMCS = [
@@ -411,7 +464,7 @@ def filterSrcDest(combinedCSI, toDS, fromDS, macBS, macUT):
     #           The only difference I've been able to spot is the `macaddr_rom/cur` is the duplicated at times
     #           (I think this means we recapture the same CSI frame on the same NIC? Unclear.)
     #           (macaddr_rom/cur corresponds to the mac address of the NIC itself.)
-    # VV Oneliner that prints out CSI 
+    # VV Oneliner that prints out CSI
     print(f"...Printing CSI Frames in macAlignedCSI with more frames than expected. If you see an output below, investigate! There shouldn't be anything.")
     for i in range(len(macAlignedCSI)): print(f"Index: {i} Size: {len(macAlignedCSI[i])}") if(len(macAlignedCSI[i]) > 2) else None
     print(f"Filtered SRC/DEST MAC Addresses! Total CSI frames remaining: {len(macAlignedCSI)}")
@@ -449,7 +502,7 @@ def statsForcedParams(macAlignedCSI):
         # Count up the paired ones now.
         numTX = matches[0]['CSI']['numTx'] - 1
         numRX = matches[0]['CSI']['numRx'] - 1
-        
+
         countForcedPaired[numTX][numRX] = countForcedPaired[numTX][numRX] + 1
 
     print(f"Number of Frames with forced parameters")
@@ -466,7 +519,7 @@ def filterForcedParams(macAlignedCSI, forceAT=0, forceAR=0):
     """ Filter out Forced Parameters
 
     If we wish to force the recorded CSI to ONLY have certain characteristics,
-    we filter everything out in `macAlignedCSI` and return it. 
+    we filter everything out in `macAlignedCSI` and return it.
 
     (There's almost certainly a better way to do this.)
 
@@ -510,7 +563,7 @@ def convertSingToUsableMatrix(forcedCSI):
 
     Returns:
         (Tuple): [outputMatrix, centerFreq_arr, chanBW_arr]
-        (Numpy Matrix [AT, AR, S, K]): AT ~ Number of TX Ants, AR ~ Num of RX Ants, 
+        (Numpy Matrix [AT, AR, S, K]): AT ~ Number of TX Ants, AR ~ Num of RX Ants,
                                         S ~ Number of Subcarriers, K ~ Number of Frames
         (centerFreq_arr, chanBW_arr): Arrays corresponding to the freq/chanBW of each relevant frame
     """
@@ -529,14 +582,14 @@ def convertSingToUsableMatrix(forcedCSI):
 def convertToUsableMatrix(forcedCSI, NICdata):
     """ Convert sets of CSI to a homogeneous Matrix of dimensions [AT, AR, S, K]
         If inhomogeneous, truncates to minimum AT and AR.
-    
+
     Args:
         forcedCSI (list of picoscenes frames): Output similar to `filterForcedParams` or `filterSrcDest`
         numNICS (int): Number of NICs considered
 
     Returns:
         (Tuple): [outputMatrix, centerFreq_arr, chanBW_arr]
-        (Numpy Matrix [AT, AR, S, K]): AT ~ Number of TX Ants, AR ~ Num of RX Ants, 
+        (Numpy Matrix [AT, AR, S, K]): AT ~ Number of TX Ants, AR ~ Num of RX Ants,
                                         S ~ Number of Subcarriers, K ~ Number of Frames
         (centerFreq_arr, chanBW_arr): Arrays corresponding to the freq/chanBW of each relevant frame
     """
@@ -567,7 +620,7 @@ def convertToUsableMatrix(forcedCSI, NICdata):
         # Match the Current Frame to the Indicated NIC via NIC MAC Address & Deposit the Frame in ATARSframe
         for currFrame in alignedFrames:         # In each frame:
             for nicIndex in range(numNICS):     # In each NIC:
-                if (currFrame['RxExtraInfo']['macaddr_cur'] == NICdata[nicIndex]['mac']): 
+                if (currFrame['RxExtraInfo']['macaddr_cur'] == NICdata[nicIndex]['mac']):
                     # Matching MAC + # Traces
                     # Reshape CSI Frame Data to fit what we need:
                     # Figure out which trace belongs to which antenna (educated guess)
@@ -634,15 +687,15 @@ def saveCSItoMAT(outputMatrix, centerFreq, chanBW, subcFreq, elemPos, \
         filepath: Absolute path to .mat file location
     """
     if (outputFolder is None):
-        outputFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Please select folder in which to save.")    
+        outputFolder = filedialog.askdirectory(initialdir=os.getcwd(), title="Please select folder in which to save.")
 
-    ### SAVE CSI TO MATLAB FILE ### 
-    
+    ### SAVE CSI TO MATLAB FILE ###
+
     matlabOutput = {
         # The [AT AR S K]-sized Matrix containing the Parsed CSI
-        'outputMatrix':     outputMatrix,     
+        'outputMatrix':     outputMatrix,
         # Center/Carrier Frequency of Collected CSI (Hz)
-        'centerFreq':       centerFreq,   
+        'centerFreq':       centerFreq,
         # Channel Bandwidth (Hz)
         'chanBW':           chanBW,
         # Subcarrier Frequencies (Hz) (Correspond to each S)
@@ -660,13 +713,13 @@ def saveCSItoMAT(outputMatrix, centerFreq, chanBW, subcFreq, elemPos, \
     return filepath
 
 ######################### DRIVER SECTION ####################################
-def parseMultiNIC(elemPos, NICdata, 
-         toDS, fromDS, macBS, macUT, 
+def parseMultiNIC(elemPos, NICdata,
+         toDS, fromDS, macBS, macUT,
          forceAT=0, forceAR=0,
          datasetFolder=""):
-    
+
     numNICS = len(NICdata)  # Number of CSI files that we're parsing
-    
+
     print("Loading CSI from raw .csi files:")
     [loadedCSI, NICdata, csiPath] = loadMultiNICS(NICdata, datasetFolder)
 
@@ -684,11 +737,10 @@ def parseMultiNIC(elemPos, NICdata,
     print("Converting to usable matrix...")
     [outputMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] = convertToUsableMatrix(forcedCSI, NICdata)
 
-    print("Saving CSI to .mat file...")  
+    print("Saving CSI to .mat file...")
     outputFilename = os.path.basename(os.path.dirname(csiPath)) # Output filename is the same as old directory
     filepath = saveCSItoMAT(outputMatrix, centerFreq=centerFreq_arr[0], chanBW=chanBW_arr[0], subcFreq=subcFreq_arr[0], \
                             elemPos=elemPos, outputFilename=outputFilename)
-
 
 if __name__ == "__main__":
     parseMultiNIC(elemPos, NICdata, toDS, fromDS, macBS, macUT, forceAT, forceAR, datasetFolder)

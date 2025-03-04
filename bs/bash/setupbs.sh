@@ -30,7 +30,7 @@ iw dev $REF_IFACE set power_save off
 # Set the reference + hotspot to the chosen channel:
 iwconfig $REF_IFACE channel $CHAN_NUM
 nmcli connection modify ${HOTSPOT_NAME}-hotspot ifname $AP_IFACE
-nmcli connection modify ${HOTSPOT_NAME}-hotspot 802-11-wireless.channel $CHAN_NUM 
+nmcli connection modify ${HOTSPOT_NAME}-hotspot 802-11-wireless.channel $CHAN_NUM
 
 # Start the hotspot:
 nmcli connection up dt12bs-hotspot
