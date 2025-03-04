@@ -15,72 +15,15 @@ import setup; setup.loadModules()
 import bs.nav.processing.utilsCSI as utilsCSI       # To import CSI from .mats
 import bs.demo.graphing.plotCSI as plotCSI          # To plot manipulated CSI
 
-<<<<<<< Updated upstream
-[Hest_BS, centerFreq_BS, chanBW_BS, elemPos_BS, subcFreq_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT()
-[Hest_UT, centerFreq_UT, chanBW_UT, elemPos_UT, subcFreq_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT()
-=======
 print("Please select CSI for BS")
-[Hest_BS, centerFreq_BS, chanBW_BS, elemPos_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT()
+[Hest_BS, centerFreq_BS, chanBW_BS, elemPos_BS, subcFreq_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT()
 print("Please select CSI for UT")
-[Hest_UT, centerFreq_UT, chanBW_UT, elemPos_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT()
->>>>>>> Stashed changes
+[Hest_UT, centerFreq_UT, chanBW_UT, elemPos_UT, subcFreq_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT()
 
 plotCSI.plot2DCSI(Hest_BS, subcFreq_BS, title="CSI from BS", doUnwrap=True)
 plotCSI.plot2DCSI(Hest_UT, subcFreq_UT, chanBW_UT, title="CSI from UT", doUnwrap=True)
 
-# Global variables
-c = 3e8 # speed of light
-fc = 2.412e9 # center frequency 2412 MHz
 
-# Assign the shape of Hest_BS and Hest_UT to a variable
-# This will output (AT, AR, S, K)
-shape_BS = np.shape(Hest_BS)
-shape_UT = np.shape(Hest_UT)
-
-# Assign a variable K to the number of frames in Hest_BS
-K_BS = shape_BS[3]
-K_UT = shape_UT[3]
-minK = np.min([K_BS, K_UT]) # This assigns both K_BS and K_UT to the minimum number of frames between the two
-
-# Extract the exact position in the array where the particular carrier frequency is 2412 MHz (This is our center freq)
-# Don't need -- already extracted. subcFreq_BS = utilsCSI.getSubcFreq(centerFreq_BS,chanBW_BS,shape_BS[2])
-#subcFreq_UT = utilsCSI.getSubcFreq(centerFreq_UT,chanBW_UT,shape_UT[2])
-
-# Pull out the frame associated with 2412 MHz
-centerFreqFrame_BS = np.where(subcFreq_BS == 2.412e9)
-centerFreqFrame_UT = np.where(subcFreq_UT == 2.412e9)
-
-# This will iterate through every frame and assign a value of H_RT to each frame at the specific freq
-H_RT = Hest_BS[0,1,centerFreqFrame_BS,:minK] * Hest_UT[0,1,centerFreqFrame_UT,:minK]
-
-# Get the angle in radians for each frame in H_RT
-H_RT_angle = np.angle(H_RT)
-
-# Unwrap the phase to remove phase wrapping
-H_RT_angle_unwrapped = np.unwrap(H_RT_angle)
-#import pdb; pdb.set_trace()
-
-# Each frame of H_RT applied to distance equation
-d_rtp_array = -1/2 * (H_RT_angle_unwrapped / (2 * np.pi)) * (c / fc)
-d_rtp_array_cm = d_rtp_array * 100  # Multiplying by 100 to convert to centimeters
-
-# Plotting
-import matplotlib.pyplot as plt
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(np.arange(minK), (d_rtp_array_cm[0, 0, :]))
-ax.set_xlabel('Frame Index')  # Label for the x-axis
-ax.set_ylabel('Distance (cm)')  # Label for the y-axis
-ax.set_title('Round-Trip Distance vs. Frame Index')  # Title of the plot
-plt.show()
-
-import pdb; pdb.set_trace()
-
-# Output the complex number for 1 Transmit Antenna, 1 Received antenna, location test3, subcarrier 0
-# Hest_BS[1,1,test3,0]
-
-#H_RT = np.zeros((1, K))
-#for k in range(minK):
-#    H_RT[k] = Hest_BS[1,1,centerFreqFrame_BS,k] * Hest_UT[1,1,centerFreqFrame_UT,k]
 
 '''
 Pseudo Code
@@ -122,3 +65,53 @@ How do we get this information?
     - similarly, we can just run H_RT_angle = np.angle(Hest_BS[1,1,test3,0])*180/np.pi to output the answer in degrees
 - lastly, plug H_RT_angle into equation d_rtp_array[i] = -1/2 * (H_RT_angle / (2 * np.pi)) * (c / fc)
 '''
+
+# Global variables
+c = 3e8 # speed of light
+fc = 2.412e9 # center frequency 2412 MHz
+
+# Assign the shape of Hest_BS and Hest_UT to a variable
+# This will output (AT, AR, S, K)
+shape_BS = np.shape(Hest_BS)
+shape_UT = np.shape(Hest_UT)
+
+# Assign a variable K to the number of frames in Hest_BS
+K_BS = shape_BS[3]
+K_UT = shape_UT[3]
+minK = np.min([K_BS, K_UT]) # This assigns both K_BS and K_UT to the minimum number of frames between the two
+
+# Extract the exact position in the array where the particular carrier frequency is 2412 MHz (This is our center freq)
+# Don't need -- already extracted. subcFreq_BS = utilsCSI.getSubcFreq(centerFreq_BS,chanBW_BS,shape_BS[2])
+#subcFreq_UT = utilsCSI.getSubcFreq(centerFreq_UT,chanBW_UT,shape_UT[2])
+
+# Pull out the frame associated with 2412 MHz
+centerFreqFrame_BS = np.where(subcFreq_BS == 2.412e9)
+centerFreqFrame_UT = np.where(subcFreq_UT == 2.412e9)
+
+# This will iterate through every frame and assign a value of H_RT to each frame at the specific freq
+H_RT = Hest_BS[0,1,centerFreqFrame_BS,:minK] * Hest_UT[0,1,centerFreqFrame_UT,:minK]
+
+# Get the angle in radians for each frame in H_RT
+H_RT_angle = np.angle(H_RT)
+
+# Unwrap the phase to remove phase wrapping
+H_RT_angle_unwrapped = np.unwrap(H_RT_angle)
+#import pdb; pdb.set_trace()
+
+# Each frame of H_RT applied to distance equation
+d_rtp_array = -1/2 * (H_RT_angle_unwrapped / (2 * np.pi)) * (c / fc)
+
+# Plotting
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.plot(np.arange(minK), (d_rtp_array[0, 0, :]))
+plt.show()
+
+import pdb; pdb.set_trace()
+
+# Output the complex number for 1 Transmit Antenna, 1 Received antenna, location test3, subcarrier 0
+# Hest_BS[1,1,test3,0]
+
+#H_RT = np.zeros((1, K))
+#for k in range(minK):
+#    H_RT[k] = Hest_BS[1,1,centerFreqFrame_BS,k] * Hest_UT[1,1,centerFreqFrame_UT,k]
