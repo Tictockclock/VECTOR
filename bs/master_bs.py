@@ -3,8 +3,8 @@ import signal
 import sys
 import os
 import subprocess
-import argparse
 import json
+import time
 
 shutdown_event = threading.Event()
 threading_process = None
@@ -82,14 +82,12 @@ def start_picoscenes():
     global pico_process
 
     # Start PicoScenes as a subprocess
-    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger;
-        -i {config["picoscenes"]["monID2"]} --mode logger
-        --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port"]}\""""
+    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port"]}\""""
 
     print("Running injection command:")
     print(cmd)
     #result = subprocess.run(cmd, shell=True)
-    pico_process = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+    pico_process = subprocess.Popen(cmd, shell=True)
 
     try:
         # Wait for process to complete, but enforce timeout
@@ -115,25 +113,67 @@ def start_parsing():
 
 def hotspot_setup():
     path = "/home/dt12/Code/VECTOR/bs/bash/setupbs.sh"
-    cmd = f"""sudo bash {path}
-    {config["setup"]["ap_interface"]}
-    {config["setup"]["monitor_interface"]}
-    {config["setup"]["reference_interface"]}
-    {config["setup"]["ssid"]} {config["setup"]["channel_number"]}
-    """
-    proc = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+    #cmd = f"""sudo -S bash {path} {config["setup"]["ap_interface"]} {config["setup"]["monitor_interface"]} {config["setup"]["reference_interface"]} {config["setup"]["channel_number"]}"""
 
-    try:
-        # Wait for process to complete, but enforce timeout
-        proc.wait(timeout=float(config["picoscenes"]["timelimit"]))
-        print("Command completed within time limit")
 
-    except subprocess.TimeoutExpired:
-        print(f"""Command did not complete within {config["picoscenes"]["timelimit"]} seconds""")
-        print("Forcing termination of the process group")
-        # Terminate entire process group
-        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        proc.wait() # Wait for termination to complete.
+    def run_command(cmd):
+        print(cmd)
+        proc = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        try:
+            stdout, stderr = proc.communicate(timeout=float(config["picoscenes"]["timelimit"]))
+            if proc.returncode == 0:
+                print("Command completed within time limit")
+                return stdout.decode().strip()
+            else:
+                print(f"Error: {stderr.decode()}")
+                return None
+        except subprocess.TimeoutExpired:
+            print(f"Command did not complete within {config['picoscenes']['timelimit']} seconds")
+            print("Forcing termination of the process group")
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            proc.wait()
+            return None
+    # Disable power save on all interfaces
+    run_command(f"""sudo -S iw dev {config["setup"]["ap_interface"]} set power_save off""")
+    run_command(f"""iw dev {config["setup"]["monitor_interface"]} set power_save off""")
+    run_command(f"""iw dev {config["setup"]["reference_interface"]} set power_save off""")
+
+    # Set the reference + hotspot to the chosen channel
+    run_command(f"""iwconfig {config["setup"]["reference_interface"]} channel {config["wifi"]["channel_number"]}""")
+    run_command(f"""nmcli connection modify {config["setup"]["hotspot_name"]}-hotspot ifname {config["setup"]["ap_interface"]}""")
+    run_command(f"""nmcli connection modify {config["setup"]["hotspot_name"]}-hotspot 802-11-wireless.channel {config["wifi"]["channel_number"]}""")
+
+    # Start the hotspot
+    run_command(f"""nmcli connection up {config["setup"]["hotspot_name"]}-hotspot""")
+
+    # Connect reference card to the hotspot
+    run_command(f"""nmcli device wifi rescan ifname {config["setup"]["reference_interface"]}""")
+    time.sleep(0.5)
+    run_command(f"""nmcli device wifi rescan ifname {config["setup"]["reference_interface"]}""")
+    run_command(f"""nmcli device wifi connect {config["setup"]["hotspot_name"]} ifname {config["setup"]["reference_interface"]} password {config["setup"]["hotspot_password"]}""")
+
+    # Get center frequency and channel bandwidth for the AP interface
+    freq_output = run_command(f"iw dev {config['setup']['ap_interface']} info")
+    if freq_output:
+        lines = freq_output.split('\n')
+        center_freq = None
+        chan_bw = None
+
+        for line in lines:
+            if "channel" in line:
+                parts = line.split()
+                chan_bw = parts[5]
+                center_freq = parts[8]
+                break
+
+        if center_freq and chan_bw:
+            arr_prep_pico_str = f"{center_freq} HT{chan_bw}"
+            print(f"CENTER_FREQ: {center_freq}, CHAN_BW: {chan_bw}")
+        else:
+            print("Failed to extract frequency and bandwidth")
+    else:
+        print("Failed to get output from iw dev command")
 
 
 def pinging():
@@ -152,6 +192,31 @@ def pinging():
     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     proc.wait()
+
+    #TODO continuous ping until shutdown_event is set
+    # cmd = f"""iperf3 -c {config["ping_settings"]["ip"]} -{config["ping_settings"]["protical"]} -b {config["ping_settings"]["bandwidth"]} -l {config["ping_settings"]["bandwidth"]} -n {config["ping_settings"]["ping_amount"]}"""
+
+    # print("Running pinging command:")
+    # print(cmd)
+    # #result = subprocess.ru n(cmd, shell=True)
+    # proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#####################
+    # proc.wait()
+    # cmd = "---"
+    # while not shutdown_event.is_set():
+    #     print("Running pinging command:")
+    #     print(cmd)
+    #     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # continuously read the output from iperf3
+        # for line in iperf3/iteration?
+            # if shutdown_event.is.set():
+                # break
+
+        # if shutdown_event.is.set():
+            # print("Shutting down pinging...")
+            # break
+
+            # print("Pinging stopped.")
 
 
 def master_handler():
@@ -173,9 +238,12 @@ def master_handler():
     picoscenes_thread = threading.Thread(target=start_picoscenes)
     parsing_thread = threading.Thread(target=start_parsing)
     # pinging_thread = threading.Thread(target=pinging)
-    # setup_thread = threading.Thread(target=hotspot_setup)
+    setup_thread = threading.Thread(target=hotspot_setup)
 
     parsing_thread.start()
+
+    setup_thread.start()
+    setup_thread.join()
 
     # setup_thread.start()
     # setup_thread.join()
@@ -188,20 +256,37 @@ def master_handler():
 
     def signal_handler(sig, frame):
         global pico_process
+
+        # Prevent infinite recursion by unbinding the signal temporarily
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         print("\nShutting down server...")
         shutdown_event.set()
 
-        # Send SIGINT, SIGTERM, SIGKILL to the PicoScenes subprocess to make sure it is terminated
+        # Gracefully terminate the PicoScenes subprocess
         if pico_process:
-            os.killpg(os.getpgid(pico_process.pid), signal.SIGINT)
-            os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
+            try:
+                print("Sending SIGINT to PicoScenes...")
+                os.killpg(os.getpgid(pico_process.pid), signal.SIGINT)
+
+                # Wait for PicoScenes to gracefully terminate
+                pico_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                print("PicoScenes did not terminate, sending SIGTERM...")
+                os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
+
+            except ProcessLookupError:
+                print("PicoScenes process already terminated.")
+
+        # Ensure no zombie processes
+        if pico_process and pico_process.poll() is None:
+            print("Force killing PicoScenes...")
             os.killpg(os.getpgid(pico_process.pid), signal.SIGKILL)
 
-            pico_process.wait()  # Wait for the subprocess to terminate
+        # Restore the signal handler so another Ctrl+C works again
+        signal.signal(signal.SIGINT, signal_handler)
 
-        # Wait for threads to finish
-        picoscenes_thread.join()
-        parsing_thread.join()
+        print("Shutdown complete.")
         sys.exit(0)
 
     # Register the signal handler for SIGINT (Ctrl+C)

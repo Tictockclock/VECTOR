@@ -16,13 +16,12 @@ import bs.nav.processing.utilsCSI as utilsCSI       # To import CSI from .mats
 import bs.demo.graphing.plotCSI as plotCSI          # To plot manipulated CSI
 
 print("Please select CSI for BS")
-[Hest_BS, centerFreq_BS, chanBW_BS, elemPos_BS, subcFreq_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT()
+[Hest_BS, centerFreq_BS, chanBW_BS, subcFreq_BS, elemPos_BS, _, csiPath_BS] = utilsCSI.loadCSIfromMAT(csiPath="~/Code/VECTOR/bs/nav/csi_data/testing/outside/2-25-25_Outside/2_BS_LAPTOP_OUTSIDE_90DEG_9-14FT.mat")
 print("Please select CSI for UT")
-[Hest_UT, centerFreq_UT, chanBW_UT, elemPos_UT, subcFreq_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT()
+[Hest_UT, centerFreq_UT, chanBW_UT, subcFreq_UT, elemPos_UT, _, csiPath_UT] = utilsCSI.loadCSIfromMAT(csiPath="~/Code/VECTOR/bs/nav/csi_data/testing/outside/2-25-25_Outside/Laptop.mat")
 
 plotCSI.plot2DCSI(Hest_BS, subcFreq_BS, title="CSI from BS", doUnwrap=True)
-plotCSI.plot2DCSI(Hest_UT, subcFreq_UT, chanBW_UT, title="CSI from UT", doUnwrap=True)
-
+plotCSI.plot2DCSI(Hest_UT, subcFreq_UT, title="CSI from UT", doUnwrap=True)
 
 
 '''

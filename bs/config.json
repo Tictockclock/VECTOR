@@ -8,7 +8,7 @@
         "freq": 2447,
         "band": "HT20",
         "forward_to_ip": "10.18.28.9",
-        "forward_to_port": 50000,
+        "forward_to_port": 12348,
         "frame_path": "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS/MPDUS_TO1_FM0/frame_0.bin",
         "timelimit": "1000"
     },

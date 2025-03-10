@@ -21,7 +21,7 @@ Dimitry Melnikov, 2/24/25
 
 #################################################################################
 ############################# USER INPUTS #######################################
-calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/3-2-25/CAL/"
+calFolder = "/home/dt12/received_files/received_frames.csi"#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25" # OPTIONAL! ABsolute path.
 saveCalToMat = False
 
 NICdata = [
@@ -40,6 +40,7 @@ NICdata = [
 toDS = 1; fromDS = 0
 macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (21) Base Station MAC Address
 macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (23) MAC Address for reference-NIC
+#macREF= [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # UT MAC Address
 
 #################################################################################
 ############################## IMPORTS ##########################################
