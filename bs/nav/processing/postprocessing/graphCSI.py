@@ -30,8 +30,10 @@ import os                                   # To retreive the file
 
 ################# USER INPUTS ##################################
 # Data location (relative to location where this script is run in shell)
-folder = "bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS"
-file   = "rx_211_250202_155437"
+#folder = "bs/nav/csi_data/testing/outside/2-25-25_Outside/CAL"
+#file   = "M21"
+folder = "bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/CAL"
+file   = "CAL_M22"
 
 loadMat = False # True if we're loading .mat output from `parseToMATLAB.py`
 if (loadMat):
