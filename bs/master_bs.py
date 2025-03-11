@@ -250,7 +250,7 @@ def master_handler():
     parser.add_argument('-s', '--start_picoscenes', action='store_true', help=f"Start without setting up the hotspot and calibration")
     args = parser.parse_args()
 
-    picoscenes_prepare_thread = threading.Thread(target=start_prepare_picoscenes(4))
+    picoscenes_prepare_thread = threading.Thread(target=start_prepare_picoscenes)
     picoscenes_thread = threading.Thread(target=start_picoscenes)
     parsing_thread = threading.Thread(target=start_parsing)
     pinging_thread = threading.Thread(target=pinging)
@@ -340,8 +340,4 @@ def master_handler():
 
 if __name__ == "__main__":
     load_config()
-
-
-
-
     master_handler()
