@@ -2,9 +2,11 @@ import threading
 import signal
 import sys
 import os
+import os.path
 import subprocess
 import json
 import time
+import argparse
 
 shutdown_event = threading.Event()
 threading_process = None
@@ -12,7 +14,12 @@ pico_process = None
 SUDO_PASSWORD = "123456"
 config = None
 bab = None
-CONFIG_PATH = "/home/dt12/Code/VECTOR/bs/config.json"
+CONFIG_PATH = None
+mypath = "/home/dt12/Code/VECTOR/bs/config.json"
+if os.path.exists(mypath):
+    CONFIG_PATH = mypath
+else:
+    CONFIG_PATH = "/home/dt12/VECTOR/bs/config.json"
 
 def load_config():
     """Load configuration from a JSON file.
@@ -35,7 +42,7 @@ def load_config():
         print(f"Error loading config: {e}")
         sys.exit(1)
 
-    print(config)
+    #print(config)
 
 def start_prepare_picoscenes():
     """Prepare the environment for PicoScenes.
@@ -118,9 +125,6 @@ def calibrate_setup():
         proc = subprocess.Popen(cmd, shell=True)
         if cmd[0:4] == "sudo":
             proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
-
-
-
 
 
 def hotspot_setup():
@@ -240,34 +244,52 @@ def master_handler():
 
     print("Base station is running. Press Ctrl+C to stop.")
 
-    # parser = argparse.ArgumentParser(description="Client to send files or messages to the server.")
-    # parser.add_argument('-s', '--send', type=str, help="Path to the file to send")
-    # parser.add_argument('-m', '--message', type=str, help="Message to send")
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Client to send files or messages to the server.")
+    parser.add_argument('-n', '--normal', action='store_true', help="Start it the way we used to")
+    parser.add_argument('-c', '--calibrate', action='store_true', help="Run through the calibration process and start")
+    parser.add_argument('-s', '--start_picoscenes', action='store_true', help=f"Start without setting up the hotspot and calibration")
+    args = parser.parse_args()
 
-    picoscenes_prepare_thread = threading.Thread(target=start_prepare_picoscenes)
+    picoscenes_prepare_thread = threading.Thread(target=start_prepare_picoscenes(4))
     picoscenes_thread = threading.Thread(target=start_picoscenes)
     parsing_thread = threading.Thread(target=start_parsing)
     pinging_thread = threading.Thread(target=pinging)
     setup_thread = threading.Thread(target=hotspot_setup)
 
-    parsing_thread.start()
-    setup_thread.start()
-    setup_thread.join()
-
-    # setup_thread.start()
-    # setup_thread.join()
-
-    picoscenes_prepare_thread.start()
-    picoscenes_prepare_thread.join()
+    if args.normal:
 
 
+        parsing_thread.start()
+        setup_thread.start()
+        setup_thread.join()
 
-    picoscenes_thread.start()
+        input("Make sure the UT is connected then press Enter to continue...")
 
-    time.sleep(10)
-    pinging_thread.start()
-    pinging_thread.join()
+        # setup_thread.start()
+        # setup_thread.join()
+
+        picoscenes_prepare_thread.start()
+        picoscenes_prepare_thread.join()
+
+
+
+        picoscenes_thread.start()
+
+        time.sleep(10)
+        pinging_thread.start()
+        pinging_thread.join()
+
+    if args.calibrate:
+        pass
+
+    if args.start_picoscenes:
+
+        parsing_thread.start()
+        picoscenes_thread.start()
+
+        time.sleep(10)
+        pinging_thread.start()
+        pinging_thread.join()
 
     if not pinging_thread.is_alive():
         os.kill(os.getpid(), signal.SIGINT)
@@ -318,4 +340,8 @@ def master_handler():
 
 if __name__ == "__main__":
     load_config()
+
+
+
+
     master_handler()
