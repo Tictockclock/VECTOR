@@ -44,8 +44,6 @@ NICdata = [
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     }
 ]
-#########################################################################
-#########################################################################
 
 # ########### LAPTOP LAYOUT ##################################
 # # NIC DATA & Element Positions for Laptop/UT Setup
@@ -63,8 +61,6 @@ NICdata = [
 #         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
 #     },
 # ]
-#############################################################
-#############################################################
 
 ######## OLD BASE STATION LAYOUT ######################
 # ## ARRAY GEOMETRY
@@ -105,8 +101,6 @@ NICdata = [
 toDS = 1; fromDS = 0
 macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
 #macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Old Setup) Base Station MAC Address
-#macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
-macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
 #macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
 macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
 
