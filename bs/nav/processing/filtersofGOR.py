@@ -11,10 +11,10 @@ Dimitry Melnikov, 2/25/25
 
 ################################################################
 ################# USER INPUTS ##################################
-datasetFolder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25" # OPTIONAL! ABsolute path.
+datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25/" # OPTIONAL! ABsolute path.
 ################# PATCH ARRAY LAYOUT ####################################
 ## ARRAY GEOMETRY
-## Element Positions
+# Element Positions
 elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
 elemPos = [ # Base Station Layout
     [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
@@ -23,30 +23,30 @@ elemPos = [ # Base Station Layout
     [0,  (1.5)*elemSpacing, 0],
 ]
 
-## File location, as well as location relative to Array POV, facing out:
-##            0             1               2              3
-##             (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
-## AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
-## NIC 2 is represented by being placed second in `NICdata`
+# File location, as well as location relative to Array POV, facing out:
+#              0             1               2              3
+#           (AUX-2)  -    (AUX-1)   -     (MAIN-1)   -   (AUX-1)
+# AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
+# NIC 2 is represented by being placed second in `NICdata`
 NICdata = [
     # Base Station Layout
     {   # NIC 1
-        'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
+        'file':  "",#"NIC21", # Leave empty to select during dialogue.
         0:      1,  # AUX
         1:      2,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
     {   # NIC 2
-        'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
+        'file': "",#"NIC22", # Leave empty to select during dialogue.
         0:      0,  # AUX
         1:      3,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     }
 ]
 
-########### LAPTOP LAYOUT ##################################
-## NIC DATA & Element Positions for Laptop/UT Setup
-## Element Positions
+# ########### LAPTOP LAYOUT ##################################
+# # NIC DATA & Element Positions for Laptop/UT Setup
+# # Element Positions
 # elemPos = [ # Laptop Layout (Estimated)
 #     [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
 #     [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
@@ -61,8 +61,7 @@ NICdata = [
 #     },
 # ]
 
-######## OLD BASE STATION LAYOUT ###########################################################
-############################################################################################
+######## OLD BASE STATION LAYOUT ######################
 # ## ARRAY GEOMETRY
 # # Element Positions
 # datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
@@ -95,32 +94,14 @@ NICdata = [
 #     }
 # ]
 
-# # NIC DATA & Element Positions for Laptop/UT Setup
-# # Element Positions
-# elemPos = [ # Laptop Layout (Estimated)
-#     [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
-#     [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
-# ]
-
-# NICdata = [
-#     {   # NIC 1
-#         'file':  "9 ft to 14 ft boresight",
-#         0:      1,  # AUX
-#         1:      0,  # MAIN
-#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-#     },
-# ]
-############################################################################################
-############################################################################################
-
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
 toDS = 0;fromDS = 1
 macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
 #macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Old Setup) Base Station MAC Address
-macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
-#macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
+#macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
+macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
 
 forceAT = 2   # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
@@ -266,7 +247,8 @@ def alignMPDU(numNICS, loadedCSI):
             # Find all matches in this NIC
             matches = [
                 frameInner for frameInner in loadedCSI[nic_index].raw
-                if frameInner['MPDUS'][0][0:33] == mpduOuter[0][0:33] # TODO - USE [0:33] !ONLY! IF USING HOTSPOT + MONITOR MODE CONFIG
+                if  (frameInner.get('MPDUS') is not None) and \
+                    (frameInner.get('MPDUS')[0][0:33] == mpduOuter[0][0:33]) # @TODO - USE [0:33] !ONLY! IF USING HOTSPOT + MONITOR MODE CONFIG
             ]   # ^^ Store `frameInner` for each match.
             # Add all found matches
             group.extend(matches)
@@ -602,7 +584,10 @@ def convertToUsableMatrix(forcedCSI, NICdata):
                     # So, if we assume MAIN ~ RX1, AUX ~ RX2, then:
                     #                                   CSI[0, 0, 50] ~ MAIN <- TX1
                     #                                   CSI[1, 0, 50] ~ AUX  <- TX1
-                    _localATARS = np.reshape(currFrame['CSI']['CSI'], (AT, AR_SING, S))
+                    #TODO what the fuck? does this do anything?
+                    _localATARS_Phase = np.reshape(currFrame['CSI']['Phase'], (AT, AR_SING, S)) # Extract Picoscenes-processed Phase (CSD removed)
+                    _localATARS_Mag   = np.reshape(currFrame['CSI']['Mag'], (AT, AR_SING, S)) # Extract Picoscenes-processed Mag (Normalized)
+                    _localATARS = _localATARS_Mag*np.exp(1j*_localATARS_Phase) # Combine to apply.
                     # If our NIC is located in positions MAIN: 0, AUX: 1, then:
                     # ATARSframe[:, 0, :] = _localATARS[:, 0, :]
                     for ant in range(AR_SING):
