@@ -13,6 +13,7 @@ Dimitry Melnikov, 2/25/25
 ################# USER INPUTS ##################################
 datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25/" # OPTIONAL! ABsolute path.
 ################# PATCH ARRAY LAYOUT ####################################
+#########################################################################
 ## ARRAY GEOMETRY
 # Element Positions
 elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
@@ -43,6 +44,8 @@ NICdata = [
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     }
 ]
+#########################################################################
+#########################################################################
 
 # ########### LAPTOP LAYOUT ##################################
 # # NIC DATA & Element Positions for Laptop/UT Setup
@@ -60,6 +63,8 @@ NICdata = [
 #         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
 #     },
 # ]
+#############################################################
+#############################################################
 
 ######## OLD BASE STATION LAYOUT ######################
 # ## ARRAY GEOMETRY
@@ -97,13 +102,15 @@ NICdata = [
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
-toDS = 0;fromDS = 1
+toDS = 1; fromDS = 0
 macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
 #macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Old Setup) Base Station MAC Address
 #macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
 macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
+#macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
+macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
 
-forceAT = 2   # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
+forceAT = 1   # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
 
 ################################################################
