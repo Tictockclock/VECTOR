@@ -11,6 +11,7 @@ threading_process = None
 pico_process = None
 SUDO_PASSWORD = "123456"
 config = None
+bab = None
 CONFIG_PATH = "/home/dt12/Code/VECTOR/bs/config.json"
 
 def load_config():
