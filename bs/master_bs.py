@@ -31,6 +31,7 @@ def load_config():
         FileNotFoundError: If the configuration file does not exist.
         json.JSONDecodeError: If the configuration file is not valid JSON.
     """
+    #load the congiguration file into config
     global config
     try:
         if not os.path.exists(CONFIG_PATH):
@@ -77,7 +78,6 @@ def start_prepare_picoscenes():
         proc.wait() # Wait for termination to complete.
 
 def start_picoscenes():
-
     """Start the PicoScenes application.
 
     Launches PicoScenes as a subprocess using parameters from the global `config.json` file. If the
@@ -120,6 +120,7 @@ def start_parsing():
         pass
 
 def calibrate_setup():
+    #"Calibrate the hotspot and connect the reference card to the hotspot."
     def run_command(cmd):
         print(cmd)
         proc = subprocess.Popen(cmd, shell=True)
@@ -128,6 +129,12 @@ def calibrate_setup():
 
 
 def hotspot_setup():
+    """
+    Setup the hotspot and connect the reference card to the hotspot.
+
+
+
+    """
     #path = "/home/dt12/Code/VECTOR/bs/bash/setupbs.sh"
     #cmd = f"""sudo -S bash {path} {config["setup"]["ap_interface"]} {config["setup"]["monitor_interface"]} {config["setup"]["reference_interface"]} {config["setup"]["channel_number"]}"""
 
@@ -218,18 +225,21 @@ def master_handler():
 
     print("Base station is running. Press Ctrl+C to stop.")
 
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description="Client to send files or messages to the server.")
     parser.add_argument('-n', '--normal', action='store_true', help="Start it the way we used to")
     parser.add_argument('-c', '--calibrate', action='store_true', help="Run through the calibration process and start")
     parser.add_argument('-s', '--start_picoscenes', action='store_true', help=f"Start without setting up the hotspot and calibration")
     args = parser.parse_args()
 
+    # Setup the threads
     picoscenes_prepare_thread = threading.Thread(target=start_prepare_picoscenes)
     picoscenes_thread = threading.Thread(target=start_picoscenes)
     parsing_thread = threading.Thread(target=start_parsing)
     pinging_thread = threading.Thread(target=pinging)
     setup_thread = threading.Thread(target=hotspot_setup)
 
+    # Start the threads based on the command line arguments
     if args.normal:
 
         parsing_thread.start()
@@ -267,7 +277,7 @@ def master_handler():
 
 
 
-
+    # Handle Ctrl+C gracefully
     def signal_handler(sig, frame):
         global pico_process
 
@@ -310,5 +320,7 @@ def master_handler():
 
 
 if __name__ == "__main__":
+    # Load the configuration file
     load_config()
+    # Start the base station
     master_handler()
