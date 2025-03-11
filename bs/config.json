@@ -10,18 +10,21 @@
         "forward_to_ip": "10.18.28.9",
         "forward_to_port": 12348,
         "frame_path": "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS/MPDUS_TO1_FM0/frame_0.bin",
-        "timelimit": "1000"
+        "timelimit": "1000",
+        "save_file": "UT_TEST_ROOM-3-11-2025"
     },
     "client": {
         "ip": "default.txt"
     },
 
     "ping_settings": {
-        "ip": "10.18.28.9",
+        "ip": "10.42.0.194",
         "interval": 0.1,
         "protical": "t",
         "bandwidth": "1M",
-        "packet_size": 64
+        "packet_size": 64,
+        "ping_amount": 1200,
+        "total_size": "76800k"
 
     },
 
@@ -29,6 +32,8 @@
         "ap_interface": "wlp4s0",
         "monitor_interface": "wlp5s0",
         "reference_interface": "wlp6s0",
-        "channel_number": 8
+        "channel_number": 8,
+        "hotspot_name": "dt12bs",
+        "hotspot_password": "12345678"
     }
 }
