@@ -12,56 +12,57 @@ Dimitry Melnikov, 2/25/25
 ################################################################
 ################# USER INPUTS ##################################
 datasetFolder = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25" # OPTIONAL! ABsolute path.
-################## PATCH ARRAY LAYOUT ####################################
-### ARRAY GEOMETRY
-# Element Positions
-# elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
-# elemPos = [ # Base Station Layout
-#     [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
-#     [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
-#     [0,  (0.5)*elemSpacing, 0],
-#     [0,  (1.5)*elemSpacing, 0],
-# ]
+################# PATCH ARRAY LAYOUT ####################################
+## ARRAY GEOMETRY
+## Element Positions
+elemSpacing = 0.079961058 # 0.65 Lambda (f = 2.437GHz)
+elemPos = [ # Base Station Layout
+    [0, -(1.5)*elemSpacing, 0], # [X, Y, Z] for Elem 0...
+    [0, -(0.5)*elemSpacing, 0], # [X, Y, Z] for Elem 1...
+    [0,  (0.5)*elemSpacing, 0],
+    [0,  (1.5)*elemSpacing, 0],
+]
 
 ## File location, as well as location relative to Array POV, facing out:
-#               0             1               2              3
-#         (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
-# AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
-# NIC 2 is represented by being placed second in `NICdata`
-# NICdata = [
-#     # Base Station Layout
-#     {   # NIC 1
-#         'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
-#         0:      1,  # AUX
-#         1:      2,  # MAIN
-#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-#     },
-#     {   # NIC 2
-#         'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
-#         0:      0,  # AUX
-#         1:      3,  # MAIN
-#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
-#     }
-# ]
-
-########### LAPTOP LAYOUT ##################################
-# NIC DATA & Element Positions for Laptop/UT Setup
-# Element Positions
-elemPos = [ # Laptop Layout (Estimated)
-    [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
-    [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
-]
-
+##            0             1               2              3
+##             (AUX-2)-(MAIN-2)-(MAIN-1)-(AUX-1)
+## AUX-2 represents the AUX (2) antenna attached to NIC 2, => NICdata[1]['AUX'] = 0
+## NIC 2 is represented by being placed second in `NICdata`
 NICdata = [
+    # Base Station Layout
     {   # NIC 1
-        'file':  "",
+        'file':  "",#"21_90deg_4ft", # Leave empty to select during dialogue.
         0:      1,  # AUX
-        1:      0,  # MAIN
+        1:      2,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
+    {   # NIC 2
+        'file': "",#"22_90deg_4ft", # Leave empty to select during dialogue.
+        0:      0,  # AUX
+        1:      3,  # MAIN
+        'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+    }
 ]
 
-######## OLD BASE STATION LAYOUT ######################
+########### LAPTOP LAYOUT ##################################
+## NIC DATA & Element Positions for Laptop/UT Setup
+## Element Positions
+# elemPos = [ # Laptop Layout (Estimated)
+#     [0, -0.5*30e-3, 0], # [X, Y, Z] for Elem 0...
+#     [0,  0.5*30e-3, 0], # [X, Y, Z] for Elem 1...
+# ]
+
+# NICdata = [
+#     {   # NIC 1
+#         'file':  "",
+#         0:      1,  # AUX
+#         1:      0,  # MAIN
+#         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
+#     },
+# ]
+
+######## OLD BASE STATION LAYOUT ###########################################################
+############################################################################################
 # ## ARRAY GEOMETRY
 # # Element Positions
 # datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/in_room/2-24-25/1_BS_LAPTOP_ROOM_90deg_4ft_BS/" # OPTIONAL! Absolute path.
@@ -109,11 +110,13 @@ NICdata = [
 #         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
 #     },
 # ]
+############################################################################################
+############################################################################################
 
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
-toDS = 0;fromDS =1
+toDS = 0;fromDS = 1
 macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
 #macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Old Setup) Base Station MAC Address
 macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
