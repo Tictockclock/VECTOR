@@ -208,32 +208,6 @@ def pinging():
         os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
         proc.wait() # Wait for termination to complete
 
-    #TODO continuous ping until shutdown_event is set
-    # cmd = f"""iperf3 -c {config["ping_settings"]["ip"]} -{config["ping_settings"]["protical"]} -b {config["ping_settings"]["bandwidth"]} -l {config["ping_settings"]["bandwidth"]} -n {config["ping_settings"]["ping_amount"]}"""
-
-    # print("Running pinging command:")
-    # print(cmd)
-    # #result = subprocess.ru n(cmd, shell=True)
-    # proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#####################
-    # proc.wait()
-    # cmd = "---"
-    # while not shutdown_event.is_set():
-    #     print("Running pinging command:")
-    #     print(cmd)
-    #     proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # continuously read the output from iperf3
-        # for line in iperf3/iteration?
-            # if shutdown_event.is.set():
-                # break
-
-        # if shutdown_event.is.set():
-            # print("Shutting down pinging...")
-            # break
-
-            # print("Pinging stopped.")
-
-
 def master_handler():
 
     """Main handler for the base station.
@@ -258,7 +232,6 @@ def master_handler():
 
     if args.normal:
 
-
         parsing_thread.start()
         setup_thread.start()
         setup_thread.join()
@@ -270,8 +243,6 @@ def master_handler():
 
         picoscenes_prepare_thread.start()
         picoscenes_prepare_thread.join()
-
-
 
         picoscenes_thread.start()
 
