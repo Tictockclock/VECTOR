@@ -32,13 +32,13 @@ elemPos = [ # Base Station Layout
 NICdata = [
     # Base Station Layout
     {   # NIC 1
-        'file':  "",#"NIC21", # Leave empty to select during dialogue.
+        'file':  "21",#"NIC21", # Leave empty to select during dialogue.
         0:      1,  # AUX
         1:      2,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated
     },
     {   # NIC 2
-        'file': "",#"NIC22", # Leave empty to select during dialogue.
+        'file': "22",#"NIC22", # Leave empty to select during dialogue.
         0:      0,  # AUX
         1:      3,  # MAIN
         'mac':  [], # MAC Address for the NIC. Leave empty -- will be autopopulated

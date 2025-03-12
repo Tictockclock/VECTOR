@@ -149,13 +149,12 @@ def parseCalCSI(loadedCalCSI, NICdata,
     for ar in range(AR):
         # For each NIC:
         currCalCSI = filtersofGOR.alignSingle(loadedCalCSI[ar])
-        plotCSI.plotMACDEST(currCalCSI)
-        import pdb; pdb.set_trace()
         # Remove Low RSSI Traces:
         currCalCSI = filtersofGOR.filterByRSSI(currCalCSI)
         # Filter by Source/Destination
-        currCalCSI = filtersofGOR.filterSrcDest(currCalCSI,
-                                                toDS, fromDS, macBS, macREF)
+        ##currCalCSI = filtersofGOR.filterSrcDest(currCalCSI,
+        ##                                        toDS, fromDS, macBS, macREF)
+        
         # Convert the frames to something useful:
         [currCalMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
                    = filtersofGOR.convertSingToUsableMatrix(currCalCSI) # NICdata deposits the trace in the right place.
@@ -164,11 +163,29 @@ def parseCalCSI(loadedCalCSI, NICdata,
         # We have [AT, AR, S] -> [0 (first transmitter), ar (current element), : (all subcarriers)]
         currAnt = elemMapping[ar] # Get AUX/MAIN assignment from elemMapping (via NICdata)
         currCalValue = avgCalMatrix[0, currAnt, :]
-        # Append averaged CSI as [AT AR S] frame
-        parsedCalCSI.append(currCalValue)
+
+        # Append, but make sure the subcarriers are the same (and aligned!)
+        if ar == 0:
+            # First iteration, don't care about subcarrier dimension.
+            # Append averaged CSI as [AT AR S] frame
+            parsedCalCSI.append(currCalValue)
+            minSubcFreq = subcFreq_arr[0]
+        else:
+            # Check if the number of subcarriers changed. If so, merge them.
+            currSubcFreq = subcFreq_arr[0]
+            if (len(minSubcFreq) < len(currSubcFreq)):
+                # Update currCalValue and minSubcFreq (since we have this specific case)
+                matPrev = np.zeros((1, 1, len(minSubcFreq), 1), dtype=np.complex128); matPrev[0, 0, :, 0] = parsedCalCSI[0]
+                matCurr = np.zeros((1, 1, len(currSubcFreq),1), dtype=np.complex128); matCurr[0, 0, :, 0] = currCalValue
+                [matCurr, matPrev, currSubcFreq, minSubcFreq] = \
+                    mergeSubcarrierFrequencies(matCurr, matPrev, currSubcFreq, minSubcFreq)
+                currCalValue = matCurr[0, 0, :, 0]
+            # Append.
+            parsedCalCSI.append(currCalValue) # Append only the correct slice!
+            
 
     # Package for output: [AT AR S K]
-    calMatrix = np.zeros((1, AR, np.shape(currCalMatrix)[2], 1), dtype=np.complex128)
+    calMatrix = np.zeros((1, AR, len(minSubcFreq), 1), dtype=np.complex128)
     calMatrix[0, :, :, 0] = np.array(parsedCalCSI) # Assumed homogeneous
     calMatrix = 1/calMatrix # If we multiply by `outputMatrix`, we want to 'cancel it out'
 
@@ -178,11 +195,40 @@ def parseCalCSI(loadedCalCSI, NICdata,
 
     return [calMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr]
 
+def mergeSubcarrierFrequencies(matA, matB, subcFreqA, subcFreqB):
+    # Truncate matA or matB according to the Subcarrier Frequency Dimension (S)
+    if (len(subcFreqA) < len(subcFreqB)):
+        print("TRUNCATING MATRIX B")
+        Hest_min = matA;                subcFreq_min = subcFreqA
+        Hest_max = matB;                subcFreq_max = subcFreqB
+    else:
+        print("TRUNCATING MATRIX A")
+        Hest_min = matB;                subcFreq_min = subcFreqB
+        Hest_max = matA;                subcFreq_max = subcFreqA
+
+    Hest_new = np.zeros(np.shape(Hest_min), dtype=np.complex128)
+
+    for s_min in range(len(subcFreq_min)):
+        for s_max in range(len(subcFreq_max)):
+            if (subcFreq_min[s_min] == subcFreq_max[s_max]):
+                # Put the larger one into the smaller one.
+                Hest_new[:, :, s_min, :] = Hest_max[:, :, s_max, :]
+                continue
+
+    if (len(subcFreqA) < len(subcFreqB)):
+        matB = Hest_new;                subcFreqB = subcFreq_min
+    else:
+        matA = Hest_new;                subcFreqA = subcFreq_min
+
+    return [matA, matB, subcFreqA, subcFreqB]
+
 def applyCalOffset(calMatrix, calSubcFreq, csiPath):
     print("Select Uncalibrated CSI from the same dataset")
     # Load Pre-Parsed CSI:
     [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath)
     [AT, AR, S, K] = np.shape(Hest)
+
+    plotCSI.plot2DCSI(Hest, subcFreq, title="CSI Pre-Calibration", doUnwrap=True)
 
     # Check to see if the subcarriers are the same.
 
@@ -240,6 +286,11 @@ def generateCalOffset(NICdata, calFolder,
     print("   which is plugged into a 'reference source,' then recorded by each element in the array.")
     print("Given that 'reference source', we wish every element to have the same response.")
     print("The calculated calibration coefficients will make it such that each will exhibit close to 0deg.")
+
+    print(f"")
+    print(f"NOTE: TODS={toDS}, FROMDS={fromDS}")
+    print(f"MAC for Base Station: {macBS}")
+    print(f"MAC for Calibration Reference: {macREF}")
 
     AR = len(NICdata) * 2
     # Load RAW .CSI files
