@@ -12,7 +12,7 @@ Dimitry Melnikov, 3/12/25 (Translated from MATLAB)
 csiPath = "" # Parsed .mat file
 
 thetaRange = [65, 115]  # Theta Range to Sample (MUSIC + Pseudospectra Plotting)
-avgWindow = 2           # MUSIC Window (We do AR x K to get correlation)
+windowSize = 2           # MUSIC Window (We do AR x K to get correlation)
 
 #################################################################################
 ############################## IMPORTS ##########################################
@@ -143,12 +143,12 @@ if __name__ == "__main__":
     plotCSI.plot2DCSI(Hest, subcFreq, title="Loaded CSI", doUnwrap=True)
 
     # Do the DOA Estimation itself:
-    doaMUSIC = getMUSICSpectrum(Hest, subcFreq, elemPos, avgWindow, thetaRange)
+    doaMUSIC = getMUSICSpectrum(Hest, subcFreq, elemPos, windowSize, thetaRange)
 
     # Plot MUSIC Pseudospectra:
     plotDOA.plotDOA_vsSubcarrier(doaMUSIC, thetaRange=thetaRange,
                                 title="MUSIC DOA vs. Subcarrier")
-    plotDOA.plotDOA_vsSnapshots(doaMUSIC, thetaRange=thetaRange, 
+    plotDOA.plotDOA_vsSnapshots(doaMUSIC, thetaRange=thetaRange, windowSize=windowSize,
                                 title="MUSIC DOA vs. Snapshots")
     
     import pdb; pdb.set_trace()

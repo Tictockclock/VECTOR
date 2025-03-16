@@ -127,7 +127,7 @@ def plotDOA_vsSnapshots(doaSpectrum, thetaRange, windowSize=1, \
     
     # Variables for plotting
     theta = np.linspace(thetaRange[0], thetaRange[1], T)
-    snapshots = np.arange(1, (K+1) - windowSize +1) # MATLAB uses 1-indexing
+    snapshots = np.arange(0, (K+1) - windowSize+1) # MATLAB uses 1-indexing
     X, Y = np.meshgrid(snapshots, theta)
 
     # Set up main plot
@@ -137,7 +137,7 @@ def plotDOA_vsSnapshots(doaSpectrum, thetaRange, windowSize=1, \
     # Plot initial data (using the first TX antenna and first snapshot)
     init_at = 0
     init_s  = 0
-    musicSpectrum = np.squeeze(doaSpectrum[init_at, :T, init_s, :K])
+    musicSpectrum = np.squeeze(doaSpectrum[init_at, :T, init_s, 0:(len(snapshots))])
     # pcolormesh creates a 2D colored plot analogous to top-down view of 3D mesh
     cax = ax.pcolormesh(X, Y, musicSpectrum, shading='auto')
     ax.set_xlabel("Snapshot (#)")
@@ -156,7 +156,7 @@ def plotDOA_vsSnapshots(doaSpectrum, thetaRange, windowSize=1, \
         # Get slider values (convert from 1-index to 0-indexed)
         at = int(sliderAT.val) - 1
         s  = int(sliderS.val) - 1
-        musicSpectrum = np.squeeze(doaSpectrum[at, :T, s, :K])
+        musicSpectrum = np.squeeze(doaSpectrum[at, :T, s, 0:(len(snapshots))])
 
         # Update color mesh without clearing the axis
         cax.set_array(musicSpectrum.ravel())
