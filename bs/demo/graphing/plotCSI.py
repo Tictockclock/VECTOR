@@ -15,7 +15,6 @@ Dimitry Melnikov 2/17/25
 # Regular Imports
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
 
 # Import VECTOR Libraries
 import os; import sys
@@ -25,6 +24,7 @@ sys.path.insert(0, VECTOR_ROOT) if (VECTOR_ROOT is not None) and (VECTOR_ROOT no
 import setup; setup.loadModules()
 
 import bs.nav.processing.utilsCSI as utilsCSI
+import bs.demo.graphing.plotUtils as plotUtils
 
 ####### FILES #####################################################################
 
@@ -77,8 +77,8 @@ def plot2DCSI(Hest, subcFreq, \
     ax.grid()
 
     # Slider
-    ax_slider = plt.axes([0.2, 0.05, 0.6, 0.03])
-    slider = Slider(ax_slider, "Snapshot (K)", 0, K - 1, valinit=0, valstep=1)
+    [slider, button_left, button_right] = \
+        plotUtils.makeBtnSlider([0.2, 0.05, 0.6, 0.03], 'Snapshot (K)', K - 1)
 
     # Update function (for slider)
     def update(val):
@@ -94,7 +94,7 @@ def plot2DCSI(Hest, subcFreq, \
         fig.canvas.draw_idle()
 
     slider.on_changed(update)
-    plt.show()  
+    plt.show(block=False)  
 
 def plot2DCSI_CFBW(Hest, centerFreq, chanBW, \
               title="CSI Phase vs. Subcarriers", doUnwrap=True):
@@ -212,4 +212,4 @@ def plotMACDEST(currCSI=None, NICnum=0, csiPath=None):
         curr_ax.legend()
         curr_ax.grid(True)
 
-    plt.show()
+    plt.show(block=False)
