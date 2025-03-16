@@ -21,8 +21,9 @@ Dimitry Melnikov, 2/24/25
 
 #################################################################################
 ############################# USER INPUTS #######################################
-calFolder = "/home/dt12/received_files/received_frames.csi"#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25" # OPTIONAL! ABsolute path.
+calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/CAL/" # OPTIONAL! ABsolute path.
 saveCalToMat = False
+saveCorrToMat= True
 
 NICdata = [
     # [0, 1, 2, 3] -> [AUX, AUX, MAIN, MAIN] -> [X22, X21, M21, M22]
@@ -162,6 +163,7 @@ def parseCalCSI(loadedCalCSI, NICdata,
         avgCalMatrix = np.mean(currCalMatrix, axis=3) # Average over time (K axis)
         # We have [AT, AR, S] -> [0 (first transmitter), ar (current element), : (all subcarriers)]
         currAnt = elemMapping[ar] # Get AUX/MAIN assignment from elemMapping (via NICdata)
+        # ^^^ TODO!!! USE ONLY THE ELEMENT WITH THE GREATEST MAGNITUDE IN THE SET!
         currCalValue = avgCalMatrix[0, currAnt, :]
 
         # Append, but make sure the subcarriers are the same (and aligned!)
@@ -190,7 +192,7 @@ def parseCalCSI(loadedCalCSI, NICdata,
     calMatrix = 1/calMatrix # If we multiply by `outputMatrix`, we want to 'cancel it out'
 
     #plotCSI.plotMACDEST(currCalCSI)
-    plotCSI.plot2DCSI(calMatrix, subcFreq_arr[0])
+    #plotCSI.plot2DCSI(calMatrix, subcFreq_arr[0])
     print(f"Calibration Matrix Complete! [AT, AR, S, K] ~ {np.shape(calMatrix)}")
 
     return [calMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr]
@@ -222,16 +224,11 @@ def mergeSubcarrierFrequencies(matA, matB, subcFreqA, subcFreqB):
 
     return [matA, matB, subcFreqA, subcFreqB]
 
-def applyCalOffset(calMatrix, calSubcFreq, csiPath):
-    print("Select Uncalibrated CSI from the same dataset")
-    # Load Pre-Parsed CSI:
-    [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath)
+def applyCalOffset(calMatrix, calSubcFreq, Hest, subcFreq):
+    # Extract dimensions of interest
     [AT, AR, S, K] = np.shape(Hest)
 
-    plotCSI.plot2DCSI(Hest, subcFreq, title="CSI Pre-Calibration", doUnwrap=True)
-
     # Check to see if the subcarriers are the same.
-
     # Duplicate to extend axes.
     calMatrixMult = np.repeat(calMatrix, K, axis=3) # Want to apply to all K frames
 
@@ -241,7 +238,7 @@ def applyCalOffset(calMatrix, calSubcFreq, csiPath):
         numReps = AT - np.shape(calMatrixMult)[0]
         calMatrixMult = np.repeat(calMatrixMult, numReps + 1, axis=0)
 
-    if ((np.shape(subcFreq) != np.shape(calSubcFreq)) or (np.equals(subcFreq, calSubcFreq))):
+    if ((np.shape(subcFreq) != np.shape(calSubcFreq)) or (not np.all(subcFreq == calSubcFreq))):
         print(f"WARNING! INCOMING SUBCARRIER FREQUENCIES DIFFERENT FROM CALIBRATION.")
         print(f"RESIZING THE LARGER CHANNEL MATRIX")
 
@@ -271,12 +268,28 @@ def applyCalOffset(calMatrix, calSubcFreq, csiPath):
     # Apply Offset:
     correctedCSI = Hest * calMatrixMult
 
+    return [correctedCSI, subcFreq]
+
+def applyCalOffsetToMAT(calMatrix, calSubcFreq, csiPath,
+                        saveCorrToMat):
+    print("Select Uncalibrated CSI from the same dataset")
+    # Load Pre-Parsed CSI:
+    [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath)
+
+    plotCSI.plot2DCSI(Hest, subcFreq, title="CSI Pre-Calibration", doUnwrap=True)
+
+    [correctedCSI, subcFreq] = applyCalOffset(calMatrix, calSubcFreq, Hest, subcFreq)
+
     # Show user:
     plotCSI.plot2DCSI(correctedCSI, subcFreq, title="CSI Post-Calibration", doUnwrap=True)
 
     # Save to .mat file:
-    corrFilename = os.path.splitext(os.path.basename(csiPath))[0] + "_POSTCAL"
-    filtersofGOR.saveCSItoMAT(correctedCSI, centerFreq, chanBW, subcFreq, elemPos, corrFilename)
+    if saveCorrToMat:
+        corrFilename = os.path.splitext(os.path.basename(csiPath))[0] + "_POSTCAL"
+        filtersofGOR.saveCSItoMAT(correctedCSI, centerFreq, chanBW, subcFreq, elemPos, corrFilename)
+
+    return [correctedCSI, csiPath]
+
 
 def generateCalOffset(NICdata, calFolder,
                       toDS, fromDS, macBS, macREF,
@@ -312,4 +325,4 @@ if __name__ == "__main__":
                       toDS, fromDS, macBS, macREF, saveCalToMat)
 
     # Apply Calibration Offset to parsed .mat file
-    applyCalOffset(calMatrix, calSubcFreq, calFolder)
+    [correctedCSI, csiPath] = applyCalOffsetToMAT(calMatrix, calSubcFreq, calFolder, saveCorrToMat)
