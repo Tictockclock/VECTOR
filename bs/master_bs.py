@@ -8,6 +8,7 @@ import json
 import time
 import argparse
 
+
 shutdown_event = threading.Event()
 threading_process = None
 pico_process = None
@@ -90,7 +91,7 @@ def start_picoscenes():
     global pico_process
 
     # Start PicoScenes as a subprocess
-    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port"]} --output {config["picoscenes"]["save_file"]}\""""
+    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port1"]} --output {config["picoscenes"]["save_file1"]}; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port2"]} --output {config["picoscenes"]["save_file2"]}\""""
 
     print("Running injection command:")
     print(cmd)
@@ -196,7 +197,7 @@ def pinging():
     """
 
     #cmd = f"""iperf3 -c {config["ping_settings"]["ip"]} -{config["ping_settings"]["protical"]} -b {config["ping_settings"]["bandwidth"]} -l {config["ping_settings"]["ping_amount"]} -n {config["ping_settings"]["total_size"]} -i {config["ping_settings"]["interval"]}"""
-    cmd = f"""ping -i 0.1 -c 1200 {config["ping_settings"]["ip"]}"""
+    cmd = f"""ping -i 4 -c 1200 {config["ping_settings"]["ip"]}"""
 
     print("Running pinging command:")
     print(cmd)
