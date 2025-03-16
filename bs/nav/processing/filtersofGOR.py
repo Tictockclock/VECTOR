@@ -11,7 +11,7 @@ Dimitry Melnikov, 2/25/25
 
 ################################################################
 ################# USER INPUTS ##################################
-datasetFolder = ""#"/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/outside/3-4-25/" # OPTIONAL! ABsolute path.
+datasetFolder = ""# # OPTIONAL! ABsolute path.
 ################# PATCH ARRAY LAYOUT ####################################
 #########################################################################
 ## ARRAY GEOMETRY

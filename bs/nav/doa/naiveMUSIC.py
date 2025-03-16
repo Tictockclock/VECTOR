@@ -11,8 +11,8 @@ Dimitry Melnikov, 3/12/25 (Translated from MATLAB)
 ############################# USER INPUTS #######################################
 csiPath = "" # Parsed .mat file
 
-thetaRange = [65, 115]  # Theta Range to Sample (MUSIC + Pseudospectra Plotting)
 windowSize = 2           # MUSIC Window (We do AR x K to get correlation)
+thetaRange = [65, 115]   # Theta Range to Sample (MUSIC + Pseudospectra Plotting)
 
 #################################################################################
 ############################## IMPORTS ##########################################
