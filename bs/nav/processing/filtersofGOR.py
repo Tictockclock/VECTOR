@@ -209,16 +209,54 @@ def loadMultiNICS(NICdata, datasetFolder=None):
         csiFilename = nic['file']
         csiPath = os.path.join(datasetFolder, csiFilename + ".csi") # Import
         [currCSI, csiPath] = loadCSIfromRAW(csiPath, f"Please select CSI for NIC {nicNum} in NICdata")
-        loadedCSI.append(currCSI)
-
-    ### RECORD THE MAC ADDRESS ASSOCIATED WITH EACH NIC THAT COLLECTED CSI ###
-    # Not to be confused with the BS/UT mac address - these addresses are baked into the CSI
-    #  (We use these in the final 'Matlab Conversion' section to make sure that the CSI comes
-    #   from the right NIC, in case things get shifted around during filtering.)
-    for nic_index in range(numNICS):
-        NICdata[nic_index]['mac'] = loadedCSI[nic_index].raw[0]['RxExtraInfo']['macaddr_cur']
+        loadedCSI = placeMultiNICS(currCSI, nicNum, NICdata, loadedCSI) # Append the same way we will for Real-Time implementation
 
     return [loadedCSI, NICdata, csiPath]
+
+def placeMultiNICS(currCSI, nicNum, NICdata, loadedCSI=[]):
+    """ CSI Placer - Preparation for Filtration
+    For use with livestreamed CSI. 
+    Given `currCSI`, which may be one or more frames as parsed directly by `Picoscenes(`csiPath`)`,
+        and a `nicNum`, which corresponds to the NIC associated with the measurement,
+        and `NICdata`, which contains the absolute antennna positions (+ other useful metadata),
+
+    places `currCSI` ad-hoc into `loadedCSI` for use with other filtersofGOR
+
+    loadedCSI is in the form of [[NIC0 Picoscenes.raw[frame0, frame1, ...]],
+                                 [NIC1 Picoscenes.raw[frame0, frame1, ...]]]
+    
+    Args:
+        currCSI (Picoscenes() Output): Raw output as returned by `Picoscenes(`csiPath`)`
+        nicNum (int): Int corresponding to NIC in `NICdata`
+        NICdata (struct): See `loadMultiNICS`
+        loadedCSI (list, optional): Input. Defaults to [].
+
+    Returns:
+        loadedCSI: Modified, and with `currCSI` applied.
+    """
+    if not loadedCSI: # Uninitialized.
+        ### POPULATE LOADEDCSI
+        # Populated loadedCSI with correct number of external dimensions
+        # (That is, external dimensions ~ Number of NICs)
+        numNICS = len(NICdata)
+        for _nicNum in range(numNICS):
+            loadedCSI.append([])
+    
+    if not loadedCSI[nicNum]: # No frames associated with NIC yet.
+        ### SET FIRST CSI FRAME (with all Picoscenes metadata)
+        loadedCSI[nicNum] = currCSI # Full, parsed-from-Picoscenes frame.
+        ### RECORD THE MAC ADDRESS ASSOCIATED WITH EACH NIC THAT COLLECTED CSI ###
+        # Not to be confused with the BS/UT mac address - these addresses are baked into the CSI
+        #  (We use these in the final 'Matlab Conversion' section to make sure that the CSI comes
+        #   from the right NIC, in case things get shifted around during filtering.)
+        NICdata[nicNum]['mac'] = currCSI.raw[0]['RxExtraInfo']['macaddr_cur']
+    
+    elif loadedCSI[nicNum]:   # There is a frame already associated with the NIC. Append:
+        ### APPEND NEW DATA TO RAW SEGMENT
+        # Concatenate the new data with the current data:
+        loadedCSI[nicNum].raw = loadedCSI[nicNum].raw + currCSI.raw
+
+    return loadedCSI # Return the modified CSI
 
 ### STITCH THE CSI || ALIGN MPDU ###
 def alignMPDU(numNICS, loadedCSI):
