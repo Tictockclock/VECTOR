@@ -54,6 +54,10 @@ macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (NIC 23) MAC Address for referenc
 forceAT = 1   # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
 
+### CAL OPTIONS
+# CABLE LENGTH
+cablePts = [[2.436e9, -104.55],[2.447e9, -139.20],[2.458e9, -173.76]] # [Freq, Phase] (use to calculate group delay)
+
 ### DOA/MUSIC Options
 windowSize = 2           # MUSIC Window (We do AR x K to get correlation)
 thetaRange = [65, 115]   # Theta Range to Sample (MUSIC + Pseudospectra Plotting)
@@ -61,7 +65,6 @@ thetaRange = [65, 115]   # Theta Range to Sample (MUSIC + Pseudospectra Plotting
 #################################################################################
 ############################## IMPORTS ##########################################
 import numpy as np                  # Numpy Processing
-import scipy.io                     # To save data to .mat file
 
 ####################### Import VECTOR Libraries ##################################
 # Import VECTOR Libraries
@@ -82,7 +85,9 @@ import bs.demo.graphing.plotDOA                         as plotDOA          # Pl
 ## GENERATE CALIBRATION MATRIX ##
 print("Generating Calibration Matrix...")
 [calMatrix, calSubcFreq] = cableCalNICS.generateCalOffset(NICdata, calFolder,
-                      toDS, fromDS, macBS, macREF, saveCalToMat=False)
+                      toDS, fromDS, macBS, macREF, 
+                      cablePts,
+                      saveCalToMat=False)
 # Plot Calibration Matrix
 plotCSI.plot2DCSI(calMatrix, calSubcFreq, title="Calibration Matrix", doUnwrap=True)
 

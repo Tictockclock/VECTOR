@@ -21,7 +21,7 @@ Dimitry Melnikov, 2/24/25
 
 #################################################################################
 ############################# USER INPUTS #######################################
-calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/CAL/" # OPTIONAL! ABsolute path.
+calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/3-2-25/CAL/"#"/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/CAL/" # OPTIONAL! ABsolute path.
 saveCalToMat = False
 saveCorrToMat= True
 
@@ -42,6 +42,9 @@ toDS = 1; fromDS = 0
 macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (21) Base Station MAC Address
 macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (23) MAC Address for reference-NIC
 #macREF= [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # UT MAC Address
+
+## CABLE LENGTH
+cablePts = [[2.436e9, -104.55],[2.447e9, -139.20],[2.458e9, -173.76]] # [Freq, Phase] (use to calculate group delay)
 
 #################################################################################
 ############################## IMPORTS ##########################################
@@ -137,9 +140,87 @@ def getElemMapping(NICdata):
 
     return elemMapping
 
+def getCableDelay(pts):
+    """ Get Cable Phase Delay from measured points
+    Gets line of best fit, then returns lambda function with same characteristics.
+    Can use to get phase delay at a given frequency (which may be different from measurement)
+
+    lambda(freq (Hz)) -> Phase (deg)
+
+    Args:
+        pts (list of lists): [[freq1 (Hz), phase1 (deg)], [freq2, phase2], ...]
+
+    Returns:
+        lambda: lambda(freq) yields the phase delay in degrees.
+    """
+    # Extract x and y:
+    x = np.array([point[0] for point in pts])
+    y = np.array([point[1] for point in pts])
+
+    # Linear regression (y = mx + b)
+    m, b = np.polyfit(x, y, 1)
+
+    print(f"Calculated group delay of {m} deg/Hz!")
+
+    # Return lambda function
+    return lambda freq: (m * freq + b)
+
+def applyCableDelay(calMatrix, calSubcFreq, cablePts=[]):
+    if not cablePts:
+        # No pts to fit to. Assume ideal (Mag 1, Phase Delay 0) for all subcarriers
+        print("No measured cable points! Assuming ideal channel (Phase Delay 0)")
+        return calMatrix
+    else:
+        # We have pts to fit to.
+        cableDelay = getCableDelay(cablePts)
+        phaseDelayPerSub = cableDelay(calSubcFreq) # Input in Hz, output in Deg
+        phaseDelayPerSub = phaseDelayPerSub*np.pi/180 # Convert to radians
+        phaseDelayPerSub = np.exp(1j*phaseDelayPerSub)# Make complex
+        
+        [AT, AR, S, K] = np.shape(calMatrix)
+        # AT = 1, K = 1 by definition -- everything comes from one reference, and is averaged to a single frame.
+        newMatrix = np.zeros(np.shape(calMatrix), dtype=np.complex128)
+        for ar in range(AR):
+            newMatrix[0, ar, :, 0] = calMatrix[0, ar, :, 0]/phaseDelayPerSub # Apply cable delay.
+
+        return newMatrix
+
+def sortCalCSI(calMatrix):
+    """ Sorts `calMatrix` by AR variance for each AT & K
+
+    Sample would return: calMatrix ~ [AT AR S K]:
+        where [0, 0, :, 0] ~ CSI for AR w/ minimum STD for AT=0, K=0
+        where [0, 1, :, 0] ~ CSI for AR w/ second smallest standard dev. for AT=0, K=0
+
+    (Note - Picoscenes gives CSI already in dB, but without the (-) sign.)
+    (As a result, we would get 12 = np.abs(...) corresponding to -12dB)
+    (-12dB > -100dB, but 12 < 100. The way we sort, the -12dB will end up at the 'greater magnitude index')
+    (^^^ This could also be wrong. But, either way, the 0th should be the greatest. -- this is if we're sorting by avg)
+    
+    Args:
+        calMatrix ([AT AR S K] Matrix): CSI Matrix
+
+    Returns:
+        ([AT AR S K] Matrix): Sorted CSI
+    """
+    
+    [AT, AR, S, K] = np.shape(calMatrix)
+
+    sortedMatrix = np.zeros(np.shape(calMatrix), dtype=np.complex128)
+    for k in range(K):
+        for at in range(AT): 
+            avgPerSubcarrier = np.std(np.abs(calMatrix[at, :, :, k]), axis=1) # Take stdev of magnitude for each AR, run along the Subcarriers
+            arOrder = np.argsort(avgPerSubcarrier)
+
+            sortedSlice = calMatrix[at, :, :, k]
+            sortedSlice = sortedSlice[arOrder, :]
+            sortedMatrix[at, :, :, k] = sortedSlice
+
+    return sortedMatrix
 
 def parseCalCSI(loadedCalCSI, NICdata,
-                toDS, fromDS, macBS, macREF):
+                toDS, fromDS, macBS, macREF,
+                cablePts):
     # Assume all NICdata is homogeneous
     # loadedCalCSI ~ [[CSI for Elem 0], [CSI for Elem 1], ... [CSI for Elem AR-1]]
     AR = len(loadedCalCSI)
@@ -155,17 +236,20 @@ def parseCalCSI(loadedCalCSI, NICdata,
         # Filter by Source/Destination
         ##currCalCSI = filtersofGOR.filterSrcDest(currCalCSI,
         ##                                        toDS, fromDS, macBS, macREF)
-        
+
         # Convert the frames to something useful:
         [currCalMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
                    = filtersofGOR.convertSingToUsableMatrix(currCalCSI) # NICdata deposits the trace in the right place.
-        # Average the Frames
-        avgCalMatrix = np.mean(currCalMatrix, axis=3) # Average over time (K axis)
-        # We have [AT, AR, S] -> [0 (first transmitter), ar (current element), : (all subcarriers)]
-        currAnt = elemMapping[ar] # Get AUX/MAIN assignment from elemMapping (via NICdata)
-        # ^^^ TODO!!! USE ONLY THE ELEMENT WITH THE GREATEST MAGNITUDE IN THE SET!
-        currCalValue = avgCalMatrix[0, currAnt, :]
+        
+        # Sort the matrix to push the highest magnitude frames to the top:
+        currCalMatrix = sortCalCSI(currCalMatrix)
 
+        # Extract the per-subcarrier values that we need (w/ max magnitude):
+        currCalValue = currCalMatrix[0, 0, :, :] # Select AR=0 for Maximum Magnitude
+
+        # Average the frames
+        currCalValue = np.mean(currCalValue, axis=1) # Average over time (truncated K axis)
+        
         # Append, but make sure the subcarriers are the same (and aligned!)
         if ar == 0:
             # First iteration, don't care about subcarrier dimension.
@@ -184,15 +268,20 @@ def parseCalCSI(loadedCalCSI, NICdata,
                 currCalValue = matCurr[0, 0, :, 0]
             # Append.
             parsedCalCSI.append(currCalValue) # Append only the correct slice!
-            
 
     # Package for output: [AT AR S K]
     calMatrix = np.zeros((1, AR, len(minSubcFreq), 1), dtype=np.complex128)
     calMatrix[0, :, :, 0] = np.array(parsedCalCSI) # Assumed homogeneous
-    calMatrix = 1/calMatrix # If we multiply by `outputMatrix`, we want to 'cancel it out'
+    
+    # Apply Cable Delay to Output Matrix:
+    calMatrix = applyCableDelay(calMatrix, subcFreq_arr[0], cablePts)
+
+    # Invert Calibration Matrix:
+    calMatrix = 1/calMatrix # Invert. If we multiply by `outputMatrix` we want to 'cancel it out'
 
     #plotCSI.plotMACDEST(currCalCSI)
     #plotCSI.plot2DCSI(calMatrix, subcFreq_arr[0])
+    #plotCSI.plot2DCSIMAG(calMatrix, subcFreq_arr[0])
     print(f"Calibration Matrix Complete! [AT, AR, S, K] ~ {np.shape(calMatrix)}")
 
     return [calMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr]
@@ -293,6 +382,7 @@ def applyCalOffsetToMAT(calMatrix, calSubcFreq, csiPath,
 
 def generateCalOffset(NICdata, calFolder,
                       toDS, fromDS, macBS, macREF,
+                      cablePts,
                       saveCalToMat=False):
     print("We wish to generate Phase Calibration Offsets for each element in a given array")
     print("We operate under the assumption that the 'Calibration Data' is generated by a cable,")
@@ -311,7 +401,8 @@ def generateCalOffset(NICdata, calFolder,
     # Determine CSI for reference cable for each trace
     [calMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
                  = parseCalCSI(loadedCalCSI, NICdata,
-                               toDS, fromDS, macBS, macREF)
+                               toDS, fromDS, macBS, macREF,
+                               cablePts)
     # Save Cal Offset to Matlab file
     if saveCalToMat:
         calPath = filtersofGOR.saveCSItoMAT(calMatrix, centerFreq_arr[0], chanBW_arr[0], subcFreq_arr[0], [],
@@ -322,7 +413,9 @@ def generateCalOffset(NICdata, calFolder,
 if __name__ == "__main__":
     # Calculate Calibration Coefficients
     [calMatrix, calSubcFreq] = generateCalOffset(NICdata, calFolder,
-                      toDS, fromDS, macBS, macREF, saveCalToMat)
+                      toDS, fromDS, macBS, macREF, 
+                      cablePts, 
+                      saveCalToMat)
 
     # Apply Calibration Offset to parsed .mat file
     [correctedCSI, csiPath] = applyCalOffsetToMAT(calMatrix, calSubcFreq, calFolder, saveCorrToMat)
