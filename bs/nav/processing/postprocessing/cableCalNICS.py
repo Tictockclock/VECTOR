@@ -21,7 +21,7 @@ Dimitry Melnikov, 2/24/25
 
 #################################################################################
 ############################# USER INPUTS #######################################
-calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/3-2-25/CAL/"#"/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/CAL/" # OPTIONAL! ABsolute path.
+calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/CAL/" # OPTIONAL! ABsolute path.
 saveCalToMat = False
 saveCorrToMat= True
 
@@ -186,11 +186,14 @@ def applyCableDelay(calMatrix, calSubcFreq, cablePts=[]):
         return newMatrix
 
 def sortCalCSI(calMatrix):
-    """ Sorts `calMatrix` by AR variance for each AT & K
+    """ Sorts `calMatrix` by AR Fit for each AT & K
 
     Sample would return: calMatrix ~ [AT AR S K]:
-        where [0, 0, :, 0] ~ CSI for AR w/ minimum STD for AT=0, K=0
-        where [0, 1, :, 0] ~ CSI for AR w/ second smallest standard dev. for AT=0, K=0
+        where [0, 0, :, 0] ~ CSI for AR w/ best fit to a line for AT=0, K=0
+        where [0, 1, :, 0] ~ CSI for AR w/ second best fit to a line. for AT=0, K=0
+
+    (For a cable, we expect a line. If the signal's seeping out of the cable, the phase would end
+     up nonlinear over subcarriers.)
 
     (Note - Picoscenes gives CSI already in dB, but without the (-) sign.)
     (As a result, we would get 12 = np.abs(...) corresponding to -12dB)
@@ -209,8 +212,15 @@ def sortCalCSI(calMatrix):
     sortedMatrix = np.zeros(np.shape(calMatrix), dtype=np.complex128)
     for k in range(K):
         for at in range(AT): 
-            avgPerSubcarrier = np.std(np.abs(calMatrix[at, :, :, k]), axis=1) # Take stdev of magnitude for each AR, run along the Subcarriers
-            arOrder = np.argsort(avgPerSubcarrier)
+            # Determine which AR trace has the cleanest (highest R^2) in the dataset
+            x = np.arange(S)
+            y = np.unwrap(np.angle(calMatrix[at, :, :, k]))
+
+            R2Scores = []           # Store the correlation coefficient
+            for ar in range(AR):
+                R2Scores.append(np.corrcoef(x, y[ar, :])[0, 1] ** 2)
+
+            arOrder = np.argsort(R2Scores)[::-1] # Best to Worst Correlation (descending order)
 
             sortedSlice = calMatrix[at, :, :, k]
             sortedSlice = sortedSlice[arOrder, :]
@@ -297,7 +307,10 @@ def mergeSubcarrierFrequencies(matA, matB, subcFreqA, subcFreqB):
         Hest_min = matB;                subcFreq_min = subcFreqB
         Hest_max = matA;                subcFreq_max = subcFreqA
 
-    Hest_new = np.zeros(np.shape(Hest_min), dtype=np.complex128)
+    [AT_min, AR_min, S_min, K_min] = np.shape(Hest_min)
+    [AT_max, AR_max, S_max, K_max] = np.shape(Hest_max)
+    
+    Hest_new = np.zeros((AT_max, AR_max, S_min, K_max), dtype=np.complex128)
 
     for s_min in range(len(subcFreq_min)):
         for s_max in range(len(subcFreq_max)):
@@ -331,28 +344,8 @@ def applyCalOffset(calMatrix, calSubcFreq, Hest, subcFreq):
         print(f"WARNING! INCOMING SUBCARRIER FREQUENCIES DIFFERENT FROM CALIBRATION.")
         print(f"RESIZING THE LARGER CHANNEL MATRIX")
 
-        if (len(subcFreq) < len(calSubcFreq)):
-            print("TRUNCATING CALIBRATION MATRIX")
-            Hest_min = Hest;                subcFreq_min = subcFreq
-            Hest_max = calMatrixMult;       subcFreq_max = calSubcFreq
-        else:
-            print("TRUNCATING INCOMING MATRIX")
-            Hest_min = calMatrixMult;       subcFreq_min = calSubcFreq
-            Hest_max = Hest;                subcFreq_max = subcFreq
-
-        Hest_new = np.zeros(np.shape(Hest_min), dtype=np.complex128)
-
-        for s_min in range(len(subcFreq_min)):
-            for s_max in range(len(subcFreq_max)):
-                if (subcFreq_min[s_min] == subcFreq_max[s_max]):
-                    # Put the larger one into the smaller one.
-                    Hest_new[:, :, s_min, :] = Hest_max[:, :, s_max, :]
-                    continue
-
-        if (len(subcFreq) < len(calSubcFreq)):
-            calMatrixMult = Hest_new;   calSubcFreq = subcFreq_min
-        else:
-            Hest   = Hest_new;          subcFreq    = subcFreq_min
+        [calMatrix, Hest, calSubcFreq, subcFreq] = \
+                    mergeSubcarrierFrequencies(calMatrix, Hest, calSubcFreq, subcFreq)
 
     # Apply Offset:
     correctedCSI = Hest * calMatrixMult
@@ -361,6 +354,8 @@ def applyCalOffset(calMatrix, calSubcFreq, Hest, subcFreq):
 
 def applyCalOffsetToMAT(calMatrix, calSubcFreq, csiPath,
                         saveCorrToMat):
+    plotCSI.plot2DCSI(calMatrix, calSubcFreq, title="Calibration Matrix", doUnwrap=True)
+
     print("Select Uncalibrated CSI from the same dataset")
     # Load Pre-Parsed CSI:
     [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath)
