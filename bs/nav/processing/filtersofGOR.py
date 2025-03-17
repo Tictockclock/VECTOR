@@ -227,7 +227,7 @@ def placeMultiNICS(currCSI, nicNum, NICdata, loadedCSI=[]):
     
     Args:
         currCSI (Picoscenes() Output): Raw output as returned by `Picoscenes(`csiPath`)`
-        nicNum (int): Int corresponding to NIC in `NICdata`
+        nicNum (int): Int corresponding to NIC address in `NICdata` (0, 1, 2, ...)
         NICdata (struct): See `loadMultiNICS`
         loadedCSI (list, optional): Input. Defaults to [].
 
@@ -257,6 +257,41 @@ def placeMultiNICS(currCSI, nicNum, NICdata, loadedCSI=[]):
         loadedCSI[nicNum].raw = loadedCSI[nicNum].raw + currCSI.raw
 
     return loadedCSI # Return the modified CSI
+
+def removMultiNICS(numDelFrames, nicNum, loadedCSI=[]):
+    """ CSI Remover - For Sliding Window Implementation
+    For use with livestreamed CSI.
+    Given `numDelFrames`, remove that many from loadedCSI[nicNum].raw array.
+
+    Args:
+        numDelFrames (int): Number of frames to remove from beginning of corresponding `loadedCSI`
+        nicNum (int): Int corresponding to NIC address in `NICdata` (0, 1, 2, ...)
+        loadedCSI (list, optional): Previously-loaded and pushed-to input. Defaults to [].
+
+    Returns:
+        loadedCSI: Modified, and with `numDelFrames` removed from start.
+    """
+    # Remove `numDelFrames` frames from loadedCSI[nicNum]
+    if not loadedCSI:
+        print("WARNING - ATTEMPTING TO REMOVE FROM EMPTY CSI SET. DOING NOTHING.")
+        return loadedCSI
+
+    if not loadedCSI[nicNum]:
+        print("WARNING - ATTEMPTING TO REMOVE FROM EMPTY NIC SET. DOING NOTHING.")
+        return loadedCSI
+    
+    elif loadedCSI[nicNum]: # There is a frame already associated with the NIC. Remove.
+        numTotFrames = len(loadedCSI[nicNum].raw)
+        if numDelFrames > numTotFrames:
+            print(f"WARNING - ATTEMPTING TO REMOVE MORE FRAMES THAN ARE AVAILABLE. REMOVING ALL.")
+            numDelFrames = numTotFrames
+
+        loadedCSI[nicNum].raw = loadedCSI[nicNum].raw[(int(numDelFrames)):]
+        return loadedCSI
+    
+    else:
+        print("WARNING - STATE UNDEFINED. DOING NOTHING.")
+        return loadedCSI
 
 ### STITCH THE CSI || ALIGN MPDU ###
 def alignMPDU(numNICS, loadedCSI):
