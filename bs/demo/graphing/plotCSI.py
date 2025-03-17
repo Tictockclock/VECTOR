@@ -27,6 +27,69 @@ import bs.nav.processing.utilsCSI as utilsCSI
 import bs.demo.graphing.plotUtils as plotUtils
 
 ####### FILES #####################################################################
+def plot2DCSIMAG(Hest, subcFreq, \
+                 title="CSI Mag vs. Subcarriers"):
+    """ Plots CSI Magnitude (dB) in 2D Plot with Slider over Snapshots
+        NOTE! THIS ASSUMES THE CSI IS ALREADY GIVEN IN dB! 
+        (This should theoretically only make logical sense with Picoscenes frames.)
+        (we plot -1*np.abs(Hest), NOT 20*np.log10(np.abs(Hest))) )
+
+    Args:
+        Hest (Numpy Matrix): Size [AT, AR, S, K], for [Num TX Ants, Num RX Ants, Num Subcarriers, Num Snapshots]
+        subcFreq (Numpy Arr): Size (S). Gives Subcarrier Frequencies (Hz) corresponding to S.
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plt.subplots_adjust(bottom=0.2)
+
+    # Extract Dimensions, resize if necessary.
+    if (len(np.shape(Hest)) == 3):
+        # Single [AT AR S] frame, need to stretch it to plot it.
+        [AT, AR, S] = np.shape(Hest); K = 1
+        pltHest = np.zeros((AT, AR, S, K), dtype=np.complex128)
+        pltHest[:, :, :, 0] = Hest
+        Hest = pltHest # Override
+
+    else:
+        [AT, AR, S, K] = np.shape(Hest)
+
+    if len(np.shape(subcFreq)) > 1:
+        subcFreq = subcFreq[0]
+
+    # Set up colors
+    # Colormap for each AT
+    colormaps = [plt.cm.Blues, plt.cm.Oranges, plt.cm.Greens, plt.cm.Purples]  # Add more if needed
+    if AT > len(colormaps):
+        raise ValueError("Not enough colormaps defined for the number of Transmitting Antennas.")
+    # Generate colors for each AR trace, making them darker as AR increases
+    colors = []
+    for t in range(AT):
+        base_colormap = colormaps[t % len(colormaps)]  # Cycle through colormaps if AT > len(colormaps)
+        colors.append([base_colormap(0.2 + 0.6 * r / AR) for r in range(AR)])  # Darker shades for higher AR
+
+    lines = [ax.plot(subcFreq, ((-1*np.abs(Hest[t, r, :, 0]))), marker='o', color=colors[t][r], label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
+
+    ax.set_title(title)
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Magnitude (dB)")
+    ax.legend()
+    ax.grid()
+
+    # Slider
+    [slider, button_left, button_right] = \
+        plotUtils.makeBtnSlider([0.2, 0.05, 0.6, 0.03], 'Snapshot (K)', K - 1)
+
+    # Update function (for slider)
+    def update(val):
+        k = int(slider.val)
+        for t in range(AT):
+            for r in range(AR):
+                mag = (-1*np.abs(Hest[t, r, :, k]))
+
+                lines[t * AR + r].set_ydata(mag)
+        fig.canvas.draw_idle()
+
+    slider.on_changed(update)
+    plt.show(block=False)     
 
 def plot2DCSI(Hest, subcFreq, \
               title="CSI Phase vs. Subcarriers", doUnwrap=True):
