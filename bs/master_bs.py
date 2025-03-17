@@ -91,7 +91,7 @@ def start_picoscenes():
     global pico_process
 
     # Start PicoScenes as a subprocess
-    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port1"]} --output {config["picoscenes"]["save_file1"]}; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port2"]} --output {config["picoscenes"]["save_file2"]}\""""
+    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port1"]} --output {config["picoscenes"]["NIC_save_file1"]}; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port2"]} --output {config["picoscenes"]["NIC_save_file2"]}\""""
 
     print("Running injection command:")
     print(cmd)
@@ -231,6 +231,8 @@ def master_handler():
     parser.add_argument('-n', '--normal', action='store_true', help="Start it the way we used to")
     parser.add_argument('-c', '--calibrate', action='store_true', help="Run through the calibration process and start")
     parser.add_argument('-s', '--start_picoscenes', action='store_true', help=f"Start without setting up the hotspot and calibration")
+    parser.add_argument('-1', '--file_1', type=str, help="Start the pinging process")
+    parser.add_argument('-2', '--file_2', type=str, help="Start the pinging process")
     args = parser.parse_args()
 
     # Setup the threads
@@ -239,6 +241,11 @@ def master_handler():
     parsing_thread = threading.Thread(target=start_parsing)
     pinging_thread = threading.Thread(target=pinging)
     setup_thread = threading.Thread(target=hotspot_setup)
+
+    if args.file_1:
+        config["picoscenes"]["NIC_save_file1"] = args.file_1
+    if args.file_2:
+        config["picoscenes"]["NIC_save_file2"] = args.file_2
 
     # Start the threads based on the command line arguments
     if args.normal:

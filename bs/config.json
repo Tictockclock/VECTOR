@@ -9,11 +9,11 @@
         "band": "HT20",
         "forward_to_ip": "10.18.28.9",
         "forward_to_port1": 12348,
-        "forward_to_port2": 12349,
+        "forward_to_port2": 12348,
         "frame_path": "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS/MPDUS_TO1_FM0/frame_0.bin",
         "timelimit": "1000",
-        "save_file1": "UT_TEST_ROOM-1-3-11-2025",
-        "save_file2": "UT_TEST_ROOM-2-3-11-2025"
+        "NIC_save_file1": "UT_TEST_ROOM-1-3-11-2025",
+        "NIC_save_file2": "UT_TEST_ROOM-2-3-11-2025"
     },
     "client": {
         "ip": "default.txt"

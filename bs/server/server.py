@@ -114,14 +114,25 @@ def read_file_bytes(file_path, num_bytes):
         data = f.read(num_bytes)
         print(" ".join(f"{byte:02x}" for byte in data))
 
-def print_csi_info(file_path):
+def split_csi_info(temp_file):
+    file_path = temp_file.name
     """Loads and prints CSI data from a .csi file."""
     [csiRaw, _] = filtersofGOR.loadCSIfromRAW(file_path)
     #print(f"Number of Frames: {csiRaw.raw}")
     print(f"First Standard MAC Header: {csiRaw.raw[0]['StandardHeader']}")
     #print(f"Basic frame info: {csiRaw.raw[0]['RxSBasic']}\n\n\n\n\n")
     print(f"MPDU: {csiRaw.raw[0]['MPDUS']}")
+    if csiRaw.raw[0]['RxExtraInfo']['macaddr_cur'] == [16, 95, 173, 215, 141, 234]:
+        return 22
+    elif csiRaw.raw[0]['RxExtraInfo']['macaddr_cur'] == [108, 47, 128, 223, 55, 202]:
+        return 23
+    else:
+        return -1
 
+def append_to_file(source_file, destination_file):
+    """Appends the contents of source_file to destination_file."""
+    with open(source_file, "rb") as src, open(destination_file, "ab") as dest:
+        dest.write(src.read())
 
 def start_udp_server(port):
     """Listens for UDP packets on the given port, processes CSI data, and passes it to print_csi_info()."""
@@ -142,7 +153,15 @@ def start_udp_server(port):
                     temp_file.flush()
                     read_file_bytes(temp_file.name, 100)
                     print(f"Processing CSI data from {addr} - {len(trimmed_data)} bytes (Port {port})")
-                    print_csi_info(temp_file.name)
+                    NIC_number = split_csi_info(temp_file)
+                    if not NIC_number == -1:
+                        if NIC_number == 22:
+                            append_to_file(temp_file.name, "/home/dt12/Code/VECTOR/bs/nav/csi_data/live_collection/22.csi")
+                        if NIC_number == 23:
+                            append_to_file(temp_file.name, "/home/dt12/Code/VECTOR/bs/nav/csi_data/live_collection/23.csi")
+
+
+
             print("\n")
 
         except Exception as e:
