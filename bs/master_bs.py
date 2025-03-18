@@ -120,17 +120,159 @@ def start_parsing():
     while not shutdown_event.is_set():
         pass
 
+
+#def calibrate_setup():
+    # def run_command(cmd):
+    #     print(f"Running command: {cmd}")
+
+    #     # Prepend the command to change the directory before running the main command
+    #     command = f"cd bs/bash && {cmd}"
+
+    #     # Open the subprocess, with stdout and stderr piped so we can capture and print them
+    #     proc = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    #     # If the command requires sudo, provide the password
+    #     if cmd.startswith("sudo"):
+    #         stdout, stderr = proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
+    #     else:
+    #         stdout, stderr = proc.communicate()
+
+    #     # Print the output to the terminal in real-time
+    #     if stdout:
+    #         print(stdout.decode(), end="")
+    #     if stderr:
+    #         print(stderr.decode(), end="")
+
+    # input("Connect M23 to X22, then press ENTER to continue...")
+
+    # # Run the setup script sequentially
+    # run_command("sudo bash setupbs.sh wlp4s0 wlp5s0 wlp6s0 8")
+
+    # # Prepare array for PicoScenes (sequential)
+    # run_command("cd ~ && array_prepare_for_picoscenes wlp5s0 '2447 HT20'")
+
+    # # Run PicoScenes in its own thread (parallel with nping later)
+    # # pico_thread = threading.Thread(target=run_command, args=('PicoScenes "-d debug; i 22 --mode logger --plot --output X22"',))
+
+    # cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port1"]} --output {config["picoscenes"]["NIC_save_file1"]}; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port2"]} --output {config["picoscenes"]["NIC_save_file2"]}\""""
+
+    # print("Running injection command:")
+    # print(cmd)
+    # #result = subprocess.run(cmd, shell=True)
+    # pico_process = subprocess.Popen(cmd, shell=True)
+
+    # # Wait 3 seconds after PicoScenes starts
+    # time.sleep(3)
+
+    # pico_process.send_signal(signal.SIGINT)
+
+    # # Run nping in parallel after waiting 3 seconds
+    # nping_thread = threading.Thread(target=run_command, args=("cd bs/bash && npingbs.sh wlp6s0 10:5f:ad:d6:a3:2b 10.255.255.255",))
+    # nping_thread.start()
+
+    # # Wait for all threads to finish before proceeding
+    # pico_thread.join()
+    # nping_thread.join()
+
+
+def run_command(cmd):
+    print(f"Running command: {cmd}")
+    # Open the subprocess, with stdout and stderr piped so we can capture and print them
+    proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # If the command requires sudo, provide the password
+    if cmd.startswith("sudo"):
+        stdout, stderr = proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
+    else:
+        stdout, stderr = proc.communicate()
+
+    # Print the output to the terminal in real-time
+    if stdout:
+        print(stdout.decode(), end="")
+    if stderr:
+        print(stderr.decode(), end="")
+
+def run_in_terminal(command, terminal="gnome-terminal"):
+    # Ensure DISPLAY is set for GUI applications
+    command_with_display = f"export DISPLAY=:0 && {command}"
+
+    # Run the command in the terminal, keeping it open after execution
+    terminal_command = f"{terminal} -- bash -c '{command_with_display}; exec bash'"
+
+    # Start the new terminal process
+    subprocess.Popen(terminal_command, shell=True)
+
+
+# def calibrate_setup():
+#     input("Connect M23 to X22, then press ENTER to continue...")
+
+#     # Run the setup script after cd into 'bs/bash' (sequential)
+#     run_command("cd bs/bash && sudo bash setupbs.sh wlp4s0 wlp5s0 wlp6s0 8")
+
+#     # Prepare array for PicoScenes (sequential)
+#     run_command("cd ~ && array_prepare_for_picoscenes wlp5s0 '2447 HT20'")
+
+#     cmd = f"""PicoScenes \"-d debug; -i 22 --output X22\""""
+
+#     print("Running injection command:")
+#     print(cmd)
+#     #result = subprocess.run(cmd, shell=True)
+#     pico_process = subprocess.Popen(cmd, shell=True)
+
+
+#     # Wait 3 seconds after PicoScenes starts
+#     input("press ENTER to NPING")
+#     if pico_process:
+#             try:
+#                 print("Sending SIGINT to PicoScenes...")
+#                 os.killpg(os.getpgid(pico_process.pid), signal.SIGINT)
+
+#                 # Wait for PicoScenes to gracefully terminate
+#                 pico_process.wait(timeout=5)
+#             except subprocess.TimeoutExpired:
+#                 print("PicoScenes did not terminate, sending SIGTERM...")
+#                 os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
+
+#             except ProcessLookupError:
+#                 print("PicoScenes process already terminated.")
+
+
+
+#     # Open another new terminal and run the nping command
+#     run_in_terminal("cd bs/bash && npingbs.sh wlp6s0 10:5f:ad:d6:a3:2b 10.255.255.255")
+
 def calibrate_setup():
-    #"Calibrate the hotspot and connect the reference card to the hotspot."
-    def run_command(cmd):
-        print(cmd)
-        proc = subprocess.Popen(cmd, shell=True)
-        if cmd[0:4] == "sudo":
-            proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
+    input("Connect M23 to X22, then press ENTER to continue...")
+
+    # Run the setup script after cd into 'bs/bash' (sequential)
+    run_command("cd bs/bash && sudo bash setupbs.sh wlp4s0 wlp5s0 wlp6s0 8")
+
+    # Prepare array for PicoScenes (sequential)
+    run_command("cd ~ && array_prepare_for_picoscenes wlp5s0 '2447 HT20'")
+
+    cmd = """PicoScenes "-d debug; -i 22 --mode logger --plot --output X22"""  # PicoScenes command
+
+    print("Running injection command:")
+    print(cmd)
+
+    # Run PicoScenes in a new terminal window to support GUI
+    run_in_terminal(cmd)
+
+    # Wait for user to press enter to continue with nping
+    input("Press ENTER to NPING")
+
+    # Open another new terminal and run the nping command
+    run_in_terminal("cd bs/bash && bash npingbs.sh wlp6s0 10:5f:ad:d6:a3:2b 10.255.255.255")
+
+
+
+
+
+
 
 
 def hotspot_setup():
-    """
+    """q
     Setup the hotspot and connect the reference card to the hotspot.
 
 
@@ -241,6 +383,7 @@ def master_handler():
     parsing_thread = threading.Thread(target=start_parsing)
     pinging_thread = threading.Thread(target=pinging)
     setup_thread = threading.Thread(target=hotspot_setup)
+    calibrate_setup_thread = threading.Thread(target=calibrate_setup)
 
     if args.file_1:
         config["picoscenes"]["NIC_save_file1"] = args.file_1
@@ -269,7 +412,10 @@ def master_handler():
         pinging_thread.join()
 
     if args.calibrate:
-        pass
+        calibrate_setup_thread.start()
+        calibrate_setup_thread.join()
+
+
 
     if args.start_picoscenes:
 
@@ -280,8 +426,11 @@ def master_handler():
         pinging_thread.start()
         pinging_thread.join()
 
+
     if not pinging_thread.is_alive():
         os.kill(os.getpid(), signal.SIGINT)
+
+
 
 
 

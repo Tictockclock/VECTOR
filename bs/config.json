@@ -37,5 +37,44 @@
         "channel_number": 8,
         "hotspot_name": "dt12bs",
         "hotspot_password": "12345678"
-    }
+    },
+
+    "array_geometry": {
+        "elemPos": [
+          [0, -0.119941587, 0],
+          [0, -0.039980529, 0],
+          [0, 0.039980529, 0],
+          [0, 0.119941587, 0]
+        ]
+      },
+      "NICdata": [
+        {
+          "file": "21",
+          "AUX": 1,
+          "MAIN": 2,
+          "mac": []
+        },
+        {
+          "file": "22",
+          "AUX": 0,
+          "MAIN": 3,
+          "mac": []
+        }
+      ],
+      "gor_filter_options": {
+        "toDS": 1,
+        "fromDS": 0,
+        "macBS": [16, 95, 173, 214, 163, 43],
+        "macUT": [216, 58, 221, 251, 104, 225],
+        "macREF": [108, 47, 128, 223, 55, 202],
+        "forceAT": 1,
+        "forceAR": 2
+      },
+      "cal_options": {
+        "cablePts": [
+          [2.436e9, -104.55],
+          [2.447e9, -139.2],
+          [2.458e9, -173.76]
+        ]
+      }
 }
