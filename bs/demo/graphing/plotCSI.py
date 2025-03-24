@@ -129,7 +129,7 @@ def plot2DCSI(Hest, subcFreq, \
         colors.append([base_colormap(0.2 + 0.6 * r / AR) for r in range(AR)])  # Darker shades for higher AR
 
     if(doUnwrap):
-        lines = [ax.plot(subcFreq, np.unwrap(np.angle(Hest[t, r, :, 0])), marker='o', color=colors[t][r], label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
+        lines = [ax.plot(subcFreq, utilsCSI.unwrapFromMiddle(np.angle(Hest[t, r, :, 0])), marker='o', color=colors[t][r], label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
     else:
         lines = [ax.plot(subcFreq, (np.angle(Hest[t, r, :, 0])), marker='o', color=colors[t][r], label=f"AT {t+1} - AR {r+1}")[0] for t in range(AT) for r in range(AR)]
 
@@ -151,7 +151,7 @@ def plot2DCSI(Hest, subcFreq, \
                 phase = np.angle(Hest[t, r, :, k])
 
                 if(doUnwrap):
-                    phase = np.unwrap(phase)
+                    phase = utilsCSI.unwrapFromMiddle(phase)
 
                 lines[t * AR + r].set_ydata(phase)
         fig.canvas.draw_idle()

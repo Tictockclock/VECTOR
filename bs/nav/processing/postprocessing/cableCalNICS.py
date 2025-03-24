@@ -181,7 +181,7 @@ def applyCableDelay(calMatrix, calSubcFreq, cablePts=[]):
         # AT = 1, K = 1 by definition -- everything comes from one reference, and is averaged to a single frame.
         newMatrix = np.zeros(np.shape(calMatrix), dtype=np.complex128)
         for ar in range(AR):
-            newMatrix[0, ar, :, 0] = calMatrix[0, ar, :, 0]/phaseDelayPerSub # Apply cable delay.
+            newMatrix[0, ar, :, 0] = calMatrix[0, ar, :, 0]*phaseDelayPerSub # Apply cable delay.
 
         return newMatrix
 
@@ -214,19 +214,60 @@ def sortCalCSI(calMatrix):
         for at in range(AT): 
             # Determine which AR trace has the cleanest (highest R^2) in the dataset
             x = np.arange(S)
-            y = np.unwrap(np.angle(calMatrix[at, :, :, k]))
+            y = utilsCSI.unwrapFromMiddle(np.angle(calMatrix[at, :, :, k]))
 
             R2Scores = []           # Store the correlation coefficient
             for ar in range(AR):
                 R2Scores.append(np.corrcoef(x, y[ar, :])[0, 1] ** 2)
 
-            arOrder = np.argsort(R2Scores)[::-1] # Best to Worst Correlation (descending order)
+            arOrder = np.argsort(R2Scores)#[::-1] # Best to Worst Correlation (descending order)
+
+            #avgPerSubcarrier = np.mean(-1*np.abs(calMatrix[at, :, :, k]), axis=1) # Take stdev of magnitude for each AR, run along the Subcarriers
+            #arOrder = np.argsort(avgPerSubcarrier)
 
             sortedSlice = calMatrix[at, :, :, k]
             sortedSlice = sortedSlice[arOrder, :]
             sortedMatrix[at, :, :, k] = sortedSlice
 
     return sortedMatrix
+
+def sortAndAverageCalCSI(calMatrix):
+    [AT, AR, S, K] = np.shape(calMatrix)
+
+    m_arr = [] # Slopes for each slice
+    b_arr = [] # Y-Intercepts for each slice
+    slice_arr = []
+    for k in range(K):
+        for at in range(AT):
+            # Determine which AR trace has the cleanest (highest R^2) in the dataset
+            x = np.arange(S)
+            y = utilsCSI.unwrapFromMiddle(np.angle(calMatrix[at, :, :, k]))
+
+            import pdb; pdb.set_trace()
+
+            R2Scores = [] # Store correlation coefficient
+            for ar in range(AR):
+                R2Scores.append(np.corrcoef(x, y[ar, :])[0, 1] ** 2)
+
+            # Select the arSlice with the cleanest correlation coefficient
+            arSlice = np.argsort(R2Scores)[-1] # Highest is the right one.
+
+            # Now, perform a curve fit to the middle few subcarriers:
+            middleSubcIndex = len(y[0])//2
+            m, b = np.polyfit(x[(middleSubcIndex-5):(middleSubcIndex+5)], y[arSlice, (middleSubcIndex-5):(middleSubcIndex+5)], 1)
+            m_arr.append(m)
+            b_arr.append(b)
+            slice_arr.append(calMatrix[at, arSlice, :, k])
+
+    medianIndex = np.argsort(m_arr)[len(m_arr)//2]
+
+    m_avg = m_arr[medianIndex]; b_avg = b_arr[medianIndex]
+    fitPhase = x*m_avg + b_avg
+    bulkDelay = np.repeat(np.mean(fitPhase), S)
+
+    return np.exp(1j*bulkDelay) # Return bulk delay, with group delay removed (to avoid divergence)
+    #return slice_arr[medianIndex] # Return 'real' data, but with group delay applied.
+
 
 def parseCalCSI(loadedCalCSI, NICdata,
                 toDS, fromDS, macBS, macREF,
@@ -251,15 +292,18 @@ def parseCalCSI(loadedCalCSI, NICdata,
         [currCalMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] \
                    = filtersofGOR.convertSingToUsableMatrix(currCalCSI) # NICdata deposits the trace in the right place.
         
+        # Sort matrix and return the averaged Cal CSI
+        currCalValue = sortAndAverageCalCSI(currCalMatrix)
+
         # Sort the matrix to push the highest magnitude frames to the top:
-        currCalMatrix = sortCalCSI(currCalMatrix)
+        #currCalMatrix = sortCalCSI(currCalMatrix)
 
         # Extract the per-subcarrier values that we need (w/ max magnitude):
-        currCalValue = currCalMatrix[0, 0, :, :] # Select AR=0 for Maximum Magnitude
+        #currCalValue = currCalMatrix[0, 0, :, :] # Select AR=0 for Maximum Magnitude
 
         # Average the frames
-        currCalValue = np.mean(currCalValue, axis=1) # Average over time (truncated K axis)
-        
+        #currCalValue = np.mean(currCalValue, axis=1) # Average over time (truncated K axis)
+
         # Append, but make sure the subcarriers are the same (and aligned!)
         if ar == 0:
             # First iteration, don't care about subcarrier dimension.
@@ -271,6 +315,7 @@ def parseCalCSI(loadedCalCSI, NICdata,
             currSubcFreq = subcFreq_arr[0]
             if (len(minSubcFreq) < len(currSubcFreq)):
                 # Update currCalValue and minSubcFreq (since we have this specific case)
+                print("WARNING - SUBCARRIERS CHANGED DURING CAL!")
                 matPrev = np.zeros((1, 1, len(minSubcFreq), 1), dtype=np.complex128); matPrev[0, 0, :, 0] = parsedCalCSI[0]
                 matCurr = np.zeros((1, 1, len(currSubcFreq),1), dtype=np.complex128); matCurr[0, 0, :, 0] = currCalValue
                 [matCurr, matPrev, currSubcFreq, minSubcFreq] = \

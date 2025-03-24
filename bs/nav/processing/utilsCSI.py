@@ -97,3 +97,20 @@ def getSubcFreqFromCSI(frame):
     subcInd     = frame['CSI']['SubcarrierIndex']           # [-26, -25, ..., -1, 0, 1, ..., 25, 26]
 
     return centerFreq + np.array(subcInd)*subcBW # Shift up, then apply bandwidths.
+
+
+def unwrapFromMiddle(phase):
+    mid_idx = len(phase) // 2  # Find middle index
+    unwrapped = np.zeros_like(phase)
+
+    # Unwrap forward from the middle
+    unwrapped[mid_idx:] = np.unwrap(phase[mid_idx:])
+
+    # Unwrap backward from the middle (reverse, unwrap, then flip back)
+    reversed_unwrap = np.unwrap(phase[:mid_idx+1][::-1])[::-1]  # Includes mid_idx
+
+    # Align the backward-unwrapped part to the forward-unwrapped part
+    offset = unwrapped[mid_idx] - reversed_unwrap[mid_idx]  # Compute shift
+    unwrapped[:mid_idx] = reversed_unwrap[:mid_idx] + offset  # Apply shift
+
+    return unwrapped
