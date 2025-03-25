@@ -7,6 +7,7 @@ import subprocess
 import json
 import time
 import argparse
+import serial
 
 
 shutdown_event = threading.Event()
@@ -58,7 +59,11 @@ def start_prepare_picoscenes():
     """
 
     # Start PicoScenes as a subprocess
-    cmd = f"""array_prepare_for_picoscenes \"{config["picoscenes"]["monID1"]} {config["picoscenes"]["monID2"]}\" \"{config["picoscenes"]["freq"]} {config["picoscenes"]["band"]}\""""
+    cmd = ""
+    if not config["picoscenes"]["one_prepare"]:
+        cmd = f"""array_prepare_for_picoscenes \"{config["picoscenes"]["monID1"]} {config["picoscenes"]["monID2"]}\" \"{config["picoscenes"]["freq"]} {config["picoscenes"]["band"]}\""""
+    else:
+        cmd = f"""array_prepare_for_picoscenes \"{config["picoscenes"]["monID2"]} \" \"{config["picoscenes"]["freq"]} {config["picoscenes"]["band"]}\""""
 
     print("Running setup command:")
     print(cmd)
@@ -330,6 +335,35 @@ def hotspot_setup():
         print("Failed to get output from iw dev command")
 
 
+
+def laser_pointer():
+    pico_port = "/dev/ttyACM0"
+    baud_rate = 115200
+
+    try:
+        ser = serial.Serial(pico_port, baud_rate, timeout=1)
+        time.sleep(2)  # Allow time for connection to establish
+        print(f"Connected to {pico_port}")
+
+        while True:
+            angle = input("Enter an angle (0-180): ") # MODIFY TO GRAB ANGLE FROM MEASUREMENT
+            if angle.isdigit():
+                ser.write(f"{angle}\n".encode())  # Send angle with newline
+                print(f"Sent: {angle}")
+                time.sleep(1)  # Allow time for Pico to process
+            else:
+                print("Invalid input. Please enter a number.")
+
+    except serial.SerialException as e:
+        print(f"Serial error: {e}")
+    except KeyboardInterrupt:
+        print("\nExiting program.")
+    finally:
+        if 'ser' in locals() and ser.is_open:
+            ser.close()
+            print("Serial port closed.")
+
+
 def pinging():
 
     """Perform network pinging using iperf3.
@@ -339,7 +373,7 @@ def pinging():
     """
 
     #cmd = f"""iperf3 -c {config["ping_settings"]["ip"]} -{config["ping_settings"]["protical"]} -b {config["ping_settings"]["bandwidth"]} -l {config["ping_settings"]["ping_amount"]} -n {config["ping_settings"]["total_size"]} -i {config["ping_settings"]["interval"]}"""
-    cmd = f"""ping -i 4 -c 1200 {config["ping_settings"]["ip"]}"""
+    cmd = f"""ping -i 5 -c 4 {config["ping_settings"]["ip"]}"""
 
     print("Running pinging command:")
     print(cmd)
