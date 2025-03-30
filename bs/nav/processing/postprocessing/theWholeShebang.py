@@ -46,9 +46,9 @@ NICdata = [
 ### GOR FILTER OPTIONS
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
-toDS = 1; fromDS = 0
-macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
-macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
+toDS = 0; fromDS = 1
+macBS = [108, 47, 128, 223, 55, 202] # (Patch Setup) Base Station MAC Address
+macUT = [140, 233, 238, 217, 162, 226] # (UT) User Terminal MAC Address
 macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (NIC 23) MAC Address for reference-NIC (for Cal)
 
 forceAT = 1   # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
@@ -84,19 +84,19 @@ import bs.demo.graphing.plotDOA                         as plotDOA          # Pl
 ############################### DRIVER ##########################################
 ## GENERATE CALIBRATION MATRIX ##
 print("Generating Calibration Matrix...")
-[calMatrix, calSubcFreq] = cableCalNICS.generateCalOffset(NICdata, calFolder,
-                      toDS, fromDS, macBS, macREF, 
-                      cablePts,
-                      saveCalToMat=False)
+# [calMatrix, calSubcFreq] = cableCalNICS.generateCalOffset(NICdata, calFolder,
+#                       toDS, fromDS, macBS, macREF,
+#                       cablePts,
+#                       saveCalToMat=False)
 # Plot Calibration Matrix
-plotCSI.plot2DCSI(calMatrix, calSubcFreq, title="Calibration Matrix", doUnwrap=True)
+#plotCSI.plot2DCSI(calMatrix, calSubcFreq, title="Calibration Matrix", doUnwrap=True)
 
 ## CARBON COPY OF `filtersofGOR.py` DRIVER: ##
 numNICS = len(NICdata) # Number of CSI files we're parsing (minus the saving)
 
 print("Loading CSI from raw .csi files:")
 [loadedCSI, NICdata, csiPath] = filtersofGOR.loadMultiNICS(NICdata, datasetFolder)
-
+import pdb; pdb.set_trace()
 print("Combining CSI by aligning MPDU...")
 combinedCSI = filtersofGOR.alignMPDU(numNICS, loadedCSI)
 
@@ -107,7 +107,7 @@ filtersofGOR.statsForcedParams(macAlignedCSI)
 
 print(f"Discarding CSI not matching parameters: AT: {forceAT}, AR: {forceAR}...")
 forcedCSI = filtersofGOR.filterForcedParams(macAlignedCSI, forceAT, forceAR)
-
+import pdb; pdb.set_trace()
 # Plot useful MAC Header Information:
 for _nic in range(numNICS):
     plotCSI.plotMACDEST(forcedCSI, NICnum=_nic)

@@ -254,7 +254,7 @@ def start_udp_server(port):
                     #read_file_bytes(temp_file.name, 100)
                     logging.info(f"Processing CSI data from {addr} - {len(trimmed_data)} bytes (Port {port})")
                     NIC_number = split_csi_info(temp_file)
-                    logging.info(f"NIC Number: {NIC_number}")
+                    print(f"NIC Number: {NIC_number}")
                     if not NIC_number == -1:
                         append_to_file(temp_file.name, f"/home/dt12/Code/VECTOR/bs/nav/csi_data/live_collection/{NIC_number}.csi")
                         [csiRaw, _] = filtersofGOR.loadCSIfromRAW(temp_file.name) # Load CSI data
@@ -338,6 +338,7 @@ def start_server():
     udp_thread_1.start()
     # udp_thread_2.start()
     try:
+        plt.show()
         while True:
             if not data_queue.empty():
                 Hest, subcFreq = data_queue.get()

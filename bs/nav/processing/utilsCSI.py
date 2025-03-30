@@ -19,7 +19,7 @@ import os                           # To retrive files
 #################################################################################
 ############################# FUNCTIONS #########################################
 def loadCSIfromMAT(csiPath=""):
-    """ Load Parsed CSI from .mat file 
+    """ Load Parsed CSI from .mat file
 
     Args:
         csiPath (string, optional): Absolute path to .mat file. Defaults to None.
@@ -30,19 +30,19 @@ def loadCSIfromMAT(csiPath=""):
             centerFreq,     # Center/Carrier Frequency for collected CSI
             chanBW,         # Channel Bandwidth (Hz)
             subcFreq,       # Subcarrier Frequencies (Hz) for each CSI Frame
-            timestamps,     # Timestamps (s) for each CSI Frame      
+            timestamps,     # Timestamps (s) for each CSI Frame
             elemPos,        # Element Positions [[X0, Y0, Z0], [X1, Y1, Z1], ...]
             loadedStruct    # Source Struct
             csiPath         # Path to loaded CSI File
-        
+
         ]: Tuple with variables of interest.
     """
     initialdir = os.getcwd() # Get the default
-    if (not os.path.isfile(csiPath)) and (not (csiPath is "")):
+    if (not os.path.isfile(csiPath)) and (not (csiPath == "")):
         print(f"File path invalid for csiPath. Bringing up GUI dialog.")
         initialdir = os.path.dirname(csiPath) # We have the directory name for the CSI Path, if it's invalid.
 
-    if (csiPath is "") or (not os.path.isfile(csiPath)):
+    if (csiPath == "") or (not os.path.isfile(csiPath)):
         # Do GUI interface if path not specified
         # Ask the user to select a single file name.
         csiPath = filedialog.askopenfilename(initialdir=initialdir,
@@ -59,8 +59,10 @@ def loadCSIfromMAT(csiPath=""):
     timestamps      = loadedStruct['timestamps']    # Timestamps (s)
     elemPos         = loadedStruct['elemPos']       # Positions for each element [[X0, Y0, Z0], [X1, Y1, Z1], ...]
 
+    return [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath]
+
     return [Hest, centerFreq, chanBW, subcFreq, timestamps, elemPos, loadedStruct, csiPath]
-    
+
 
 
 

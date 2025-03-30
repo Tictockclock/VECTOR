@@ -10,7 +10,7 @@ SRC_IFACE=$1
 SRC_MAC="6c:2f:80:df:37:ca" # Reference MAC Address
 DST_MAC=$2 #"10:5f:ad:d6:a3:2b" (Hotspot MAC Address)
 DST_IP=$3 #"10.255.255.255" 
-PING_RATE=5 #PING_RATE packets per second
+PING_RATE=7000 #PING_RATE packets per second
 NUM_PACKETS=$(($PING_RATE*60)) # 1 Minute's worth of packets.
 
 echo "Testing with nping on: $1"

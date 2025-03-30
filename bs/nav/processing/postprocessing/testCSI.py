@@ -18,10 +18,11 @@ import bs.demo.graphing.plotCSI as plotCSI              # To plot CSI
 
 #################################################################################
 #csiPath = "home/dt12/received_files/1742145148546.csi"
-csiPath = "/home/dt12/Code/VECTOR/output_trimmed.csi"
+#csiPath = "/home/dt12/Code/VECTOR/output_trimmed.csi"
 #csiPath = "/home/dt12/Code/VECTOR/received_files/received_frames.csi"
 #csiPath = "/home/dt12/UT_TEST_ROOM-3-11-2025.csi"
-csiPath = "/home/dt12/csi_frames/1742148391299.csi"
+#csiPath = "/home/dt12/Code/VECTOR/bs/nav/csi_data/live_collection/23.csi"
+csiPath = ""
 
 [csiRaw, csiPath] = filtersofGOR.loadCSIfromRAW(csiPath)
 
