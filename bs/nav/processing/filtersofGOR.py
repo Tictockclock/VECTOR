@@ -627,6 +627,7 @@ def convertToUsableMatrix(forcedCSI, NICdata):
     centerFreq_arr  = [] # Center Frequency
     chanBW_arr      = [] # Channel Bandwidth
     subcFreq_arr    = [] # Subcarrier Frequencies (Hz)
+    timestamps      = [] # Timestamps (s) associated with First NIC
 
     numNICS = len(NICdata)
 
@@ -641,6 +642,7 @@ def convertToUsableMatrix(forcedCSI, NICdata):
         centerFreq_arr.append(float(firstCSIFrame['CarrierFreq'])) # Given in Hz
         chanBW_arr.append(float(firstCSIFrame['CBW']*1e6))        # Channel BW given in MHz, convert to Hz
         subcFreq_arr.append(utilsCSI.getSubcFreqFromCSI(alignedFrames[0])) # Subcarrier Frequencies (Hz)
+        timestamps.append(alignedFrames[0]['RxSBasic']['systemns'] / 1e9) # Convert to seconds
 
         ATARSframe = np.zeros((AT, AR, S), dtype=np.complex128)
 
@@ -689,9 +691,9 @@ def convertToUsableMatrix(forcedCSI, NICdata):
     # With all frames deposited in the first dimension, want to permute them to fit the output expectations
     # [(K) AT AR S] -> [AT AR S (K)]
     print(f"Output Matrix (numTX, numRX, numSubcarriers, numSnapshots) ~ {np.shape(trimmedOutputMatrix)}")
-    return [trimmedOutputMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr]
+    return [trimmedOutputMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr, timestamps]
 
-def saveCSItoMAT(outputMatrix, centerFreq, chanBW, subcFreq, elemPos, \
+def saveCSItoMAT(outputMatrix, centerFreq, chanBW, subcFreq, timestamps, elemPos, \
                  outputFilename, outputFolder=None):
     """ Save processed CSI to .mat file.
 
@@ -730,6 +732,8 @@ def saveCSItoMAT(outputMatrix, centerFreq, chanBW, subcFreq, elemPos, \
         'chanBW':           chanBW,
         # Subcarrier Frequencies (Hz) (Correspond to each S)
         'subcFreq':         subcFreq,
+        # Timestamps for each frame
+        'timestamps':       timestamps,
         # RX Antenna Element Positions
         'elemPos':          elemPos,
     }   # Output Dictionary to shove things into

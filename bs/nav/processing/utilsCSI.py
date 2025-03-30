@@ -29,6 +29,8 @@ def loadCSIfromMAT(csiPath=""):
             Hest,           # CSI itself [AT AR S K]
             centerFreq,     # Center/Carrier Frequency for collected CSI
             chanBW,         # Channel Bandwidth (Hz)
+            subcFreq,       # Subcarrier Frequencies (Hz) for each CSI Frame
+            timestamps,     # Timestamps (s) for each CSI Frame      
             elemPos,        # Element Positions [[X0, Y0, Z0], [X1, Y1, Z1], ...]
             loadedStruct    # Source Struct
             csiPath         # Path to loaded CSI File
@@ -54,9 +56,10 @@ def loadCSIfromMAT(csiPath=""):
     centerFreq      = loadedStruct['centerFreq']    # Center/Carrier Frequency for collected CSI (Hz)
     chanBW          = loadedStruct['chanBW']        # Channel Bandwidth (Hz)
     subcFreq        = loadedStruct['subcFreq'][0]   # Subcarrier Frequencies (Hz)
+    timestamps      = loadedStruct['timestamps']    # Timestamps (s)
     elemPos         = loadedStruct['elemPos']       # Positions for each element [[X0, Y0, Z0], [X1, Y1, Z1], ...]
 
-    return [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath]
+    return [Hest, centerFreq, chanBW, subcFreq, timestamps, elemPos, loadedStruct, csiPath]
     
 
 
