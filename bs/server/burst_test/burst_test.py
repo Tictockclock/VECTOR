@@ -124,7 +124,7 @@ def start_picoscenes():
     global pico_process
 
     # Start PicoScenes as a subprocess
-    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port1"]} --output {config["picoscenes"]["NIC_save_file1"]}; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port2"]} --output {config["picoscenes"]["NIC_save_file2"]}\""""
+    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port1"]} --output {config["picoscenes"]["NIC_save_file1"]}; -i {config["picoscenes"]["monID2"]} --mode logger --forward-to {config["picoscenes"]["forward_to_ip"]}:{config["picoscenes"]["forward_to_port2"]} --output {config["picoscenes"]["NIC_save_file2"]} -q\""""
 
     print("Running injection command:")
     print(cmd)
