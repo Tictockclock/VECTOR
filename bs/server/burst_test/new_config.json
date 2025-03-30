@@ -46,7 +46,7 @@
         "mode": "injector",
         "repeat": 1e6,
         "delay": 1e3,
-        "preset": "TX_CBW_20_UHT"
+        "preset": "TX_CBW_20_VHT"
     }
 
 }
