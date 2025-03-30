@@ -59,8 +59,6 @@ def loadCSIfromMAT(csiPath=""):
     timestamps      = loadedStruct['timestamps']    # Timestamps (s)
     elemPos         = loadedStruct['elemPos']       # Positions for each element [[X0, Y0, Z0], [X1, Y1, Z1], ...]
 
-    return [Hest, centerFreq, chanBW, subcFreq, elemPos, loadedStruct, csiPath]
-
     return [Hest, centerFreq, chanBW, subcFreq, timestamps, elemPos, loadedStruct, csiPath]
 
 
