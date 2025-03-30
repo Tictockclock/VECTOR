@@ -9,6 +9,7 @@ import time
 import argparse
 import zmq
 import logging
+import socket
 shutdown_event = threading.Event()
 threading_process = None
 pico_process = None
@@ -18,6 +19,9 @@ config = None
 bab = None
 done_pinging_flag = False
 START_FLAG = False
+TARGET_IP = "10.42.0.56"  # Change this to the receiver's IP address (laptop)
+PORT = 5000
+BUFFER_SIZE = 1024
 HOST = '0.0.0.0'
 PORT_ZMQ_MSG = 12347
 CONFIG_PATH = None
@@ -190,51 +194,44 @@ def pinging():
 
 
 def get_message():
-    global START_FLAG  # Needed to modify the global variable
+    """
+    Listens for an incoming connection on the global PORT and returns the received message.
 
-    context = zmq.Context()
-    socket = context.socket(zmq.PULL)
-    socket.bind(f"tcp://{HOST}:{PORT_ZMQ_MSG}")  # Ensure HOST allows external connections
-    logging.info(f"ZeroMQ Message Server listening on {HOST}:{PORT_ZMQ_MSG}")
-
-    poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
-
+    Returns:
+        str: The received message.
+    """
     try:
-        while not shutdown_event.is_set():
-            socks = dict(poller.poll(100))  # 100ms timeout
-            if socks.get(socket) == zmq.POLLIN:
-                message = socket.recv_string()
-                print(f"Received: {message}")
-
-                if message == "Start":
-                    START_FLAG = True
-                elif message == "Stop":
-                    START_FLAG = False
+        # Create a socket using IPv4 and TCP
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', PORT))
+            s.listen(1)
+            print(f"Listening for connections on port {PORT}...")
+            conn, addr = s.accept()
+            with conn:
+                print(f"Connected by {addr}")
+                data = conn.recv(BUFFER_SIZE)
+                message = data.decode('utf-8')
+                print(f"Received message: {message}")
+                return message
     except Exception as e:
-        logging.error(f"Error in get_message: {e}")
-    finally:
-        socket.close()
-        context.term()
+        print(f"An error occurred in receive_message: {e}")
+        return None
 
 def send_message(message):
     """
-    Sends a message to the receiver.
-    """
-    context = zmq.Context()
-    socket = context.socket(zmq.PUSH)
-    socket.setsockopt(zmq.LINGER, 0)  # Ensures socket closes immediately after sending
-    socket.connect(f"tcp://{HOST}:{PORT_ZMQ_MSG}")
+    Sends the provided message to the receiver using the global TARGET_IP and PORT.
 
-    print(f"Sending message to {HOST}:{PORT_ZMQ_MSG}...")
+    Parameters:
+        message (str): The message to send.
+    """
     try:
-        socket.send_string(message)
-        print("Message sent successfully.")
+        # Create a socket using IPv4 and TCP
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((TARGET_IP, PORT))
+            s.sendall(message.encode('utf-8'))
+            print(f"Message sent to {TARGET_IP}:{PORT}")
     except Exception as e:
-        print(f"Error sending message: {e}")
-    finally:
-        socket.close()
-        context.term()
+        print(f"An error occurred in send_message: {e}")
 
 def master_handler():
 
