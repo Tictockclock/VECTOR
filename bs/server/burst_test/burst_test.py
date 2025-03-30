@@ -212,7 +212,9 @@ def get_message():
                 data = conn.recv(BUFFER_SIZE)
                 message = data.decode('utf-8')
                 print(f"Received message: {message}")
-                return message
+                if message == "Start":
+                    global START_FLAG
+                    START_FLAG = True
     except Exception as e:
         print(f"An error occurred in receive_message: {e}")
         return None
