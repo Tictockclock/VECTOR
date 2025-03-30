@@ -1,0 +1,52 @@
+{
+    "picoscenes": {
+        "ip": "10.18.28.9",
+        "debug": "debug",
+        "monID1": "21",
+        "monID2": "22",
+        "mode": "logger",
+        "freq": 2447,
+        "band": "HT20",
+        "forward_to_ip": "10.18.28.9",
+        "forward_to_port1": 12348,
+        "forward_to_port2": 12348,
+        "frame_path": "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/asec_basement/1_BS_LAPTOP_90DEG_9FT_BS/MPDUS_TO1_FM0/frame_0.bin",
+        "timelimit": "10000",
+        "NIC_save_file1": "UT_TEST_ROOM-1-3-11-2025",
+        "NIC_save_file2": "UT_TEST_ROOM-2-3-11-2025",
+        "one_prepare": 0
+    },
+    "client": {
+        "ip": "default.txt"
+    },
+
+    "ping_settings": {
+        "ip": "10.42.0.56",
+        "interval": 4,
+        "protical": "t",
+        "bandwidth": "1M",
+        "packet_size": 64,
+        "ping_amount": 1200,
+        "total_size": "76800k"
+
+    },
+
+    "setup": {
+        "ap_interface": "wlp6s0",
+        "monitor_interface": "wlp5s0",
+        "reference_interface": "wlp6s0",
+        "channel_number": 8,
+        "hotspot_name": "dt12bs",
+        "hotspot_password": "12345678"
+    },
+
+    "hack_rf": {
+        "freq": 2447,
+        "rate": 20e6,
+        "mode": "injector",
+        "repeat": 1e6,
+        "delay": 1e3,
+        "preset": "TX_CBW_20_UHT"
+    }
+
+}
