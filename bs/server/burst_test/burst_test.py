@@ -7,7 +7,6 @@ import subprocess
 import json
 import time
 import argparse
-import serial
 import zmq
 import logging
 shutdown_event = threading.Event()
@@ -284,7 +283,7 @@ def master_handler():
         picoscenes_thread.start()
         picoscenes_thread.join()
 
-        
+
 
 
 
