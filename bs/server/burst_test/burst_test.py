@@ -181,7 +181,7 @@ def pinging():
     proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
     try:
         # Wait for process to complete, but enforce timeout
-        proc.wait(timeout=float(config["picoscenes"]["timelimit"]))
+        proc.wait(timeout=20)
         print("Command completed within time limit")
 
     except subprocess.TimeoutExpired:
@@ -191,6 +191,36 @@ def pinging():
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 
         proc.wait() # Wait for termination to complete.
+
+
+def pinging2():
+
+    """Perform network pinging using iperf3.
+
+    Executes an `iperf3` command to send small packets to a target IP address. The command runs
+    in a loop until the `shutdown_event` is set, allowing for graceful termination.
+    """
+
+    cmd = f"""PicoScenes \"-d debug -i hackrf0 --freq {config["hack_rf"]["freq"]} --rate {config["hack_rf"]["rate"]} --mode {config["hack_rf"]["mode"]} --repeat {config["hack_rf"]["repeat"]} --delay {config["hack_rf"]["delay"]} --preset {config["hack_rf"]["preset"]}\""""
+
+    print("Running setup command:")
+    print(cmd)
+    #result = subprocess.run(cmd, shell=True)
+    proc = subprocess.Popen(cmd, shell=True)
+    proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
+    try:
+        # Wait for process to complete, but enforce timeout
+        proc.wait(timeout=9999)
+        print("Command completed within time limit")
+
+    except subprocess.TimeoutExpired:
+        print(f"""Command did not complete within {config["picoscenes"]["timelimit"]} seconds""")
+        print("Forcing termination of the process group")
+        # Terminate entire process group
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
+        proc.wait() # Wait for termination to complete.
+
 
 
 def get_message():
@@ -281,6 +311,7 @@ def master_handler():
     if args.base:
 
         picoscenes_thread = threading.Thread(target=pinging )
+        picoscenes_thread = threading.Thread(target=pinging2)
         recive_thread = threading.Thread(target=get_message)
 
         recive_thread.start()
@@ -288,6 +319,8 @@ def master_handler():
             pass
         picoscenes_thread.start()
         picoscenes_thread.join()
+
+
 
 
 
