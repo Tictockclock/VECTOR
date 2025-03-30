@@ -10,7 +10,8 @@ Dimitry Melnikov, (Driver), 3/16/2025
 ################################################################
 ################# USER INPUTS ##################################
 calFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/CAL/"      # OPTIONAL! Absolute path to Calibration Folder
-datasetFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/asec_basement/3-11-25/"  # OPTIONAL! Absolute path to CSI Dataset Folder
+datasetFolder = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/in_room/3-27-reftest/"  # OPTIONAL! Absolute path to CSI Dataset Folder
+
 
 ## ARRAY GEOMETRY
 # Element Positions
@@ -47,9 +48,12 @@ NICdata = [
 # MAC Address & To/From DS Alignment
 # See https://mrncciew.com/2014/09/28/cwap-mac-headeraddresses/
 toDS = 0; fromDS = 1
-macBS = [108, 47, 128, 223, 55, 202] # (Patch Setup) Base Station MAC Address
-macUT = [140, 233, 238, 217, 162, 226] # (UT) User Terminal MAC Address
-macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (NIC 23) MAC Address for reference-NIC (for Cal)
+macBS = [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (Alt-BS Setup) (NIC 23) MAC Address for reference-NIC
+#macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
+#macUT = [0xd8, 0x3a, 0xdd, 0xfb, 0x68, 0xe1] # (UT) User Terminal MAC Address
+macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
+#macREF= [0x6c, 0x2f, 0x80, 0xdf, 0x37, 0xca] # (NIC 23) MAC Address for reference-NIC (for Cal)
+macREF = macBS
 
 forceAT = 1   # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Transmit Antennas
 forceAR = 2    # 0 to disable (but will truncate to minimum), otherwise will only select CSI with the corresponding # Receive Antennas
@@ -109,21 +113,21 @@ print(f"Discarding CSI not matching parameters: AT: {forceAT}, AR: {forceAR}..."
 forcedCSI = filtersofGOR.filterForcedParams(macAlignedCSI, forceAT, forceAR)
 import pdb; pdb.set_trace()
 # Plot useful MAC Header Information:
-for _nic in range(numNICS):
-    plotCSI.plotMACDEST(forcedCSI, NICnum=_nic)
+# for _nic in range(numNICS):
+#     plotCSI.plotMACDEST(forcedCSI, NICnum=_nic)
 
 print("Converting to usable matrix...")
-[parsedMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr] = filtersofGOR.convertToUsableMatrix(forcedCSI, NICdata)
+[parsedMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr, timestamps] = filtersofGOR.convertToUsableMatrix(forcedCSI, NICdata)
 
 # Plot Parsed Matrix
-plotCSI.plot2DCSI(parsedMatrix, subcFreq_arr[0], title="CSI Pre-Calibration", doUnwrap=True)
+##plotCSI.plot2DCSI(parsedMatrix, subcFreq_arr[0], title="CSI Pre-Calibration", doUnwrap=True)
 
 ## APPLY CALIBRATION OFFSET TO PARSED MATRIX ##
 print("Applying Calibration Matrix to Parsed Matrix...")
 [correctedMatrix, subcFreq] = cableCalNICS.applyCalOffset(calMatrix, calSubcFreq, parsedMatrix, subcFreq_arr[0])
 
 # Plot Calibrated Matrix
-plotCSI.plot2DCSI(correctedMatrix, subcFreq, title="CSI Post-Calibration", doUnwrap=True)
+##plotCSI.plot2DCSI(correctedMatrix, subcFreq, title="CSI Post-Calibration", doUnwrap=True)
 
 ## PERFORM DOA VIA MUSIC ALGORITHM ##
 print("Estimating Direction of Arrival via MUSIC Algorithm...")
