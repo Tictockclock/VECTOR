@@ -12,6 +12,7 @@ import logging
 shutdown_event = threading.Event()
 threading_process = None
 pico_process = None
+pinging_process = None
 SUDO_PASSWORD = "123456"
 config = None
 bab = None
@@ -189,42 +190,51 @@ def pinging():
 
 
 def get_message():
-    """
+    global START_FLAG  # Needed to modify the global variable
 
-
-    """
     context = zmq.Context()
     socket = context.socket(zmq.PULL)
-    socket.bind(f"tcp://{HOST}:{PORT_ZMQ_MSG}")
+    socket.bind(f"tcp://{HOST}:{PORT_ZMQ_MSG}")  # Ensure HOST allows external connections
     logging.info(f"ZeroMQ Message Server listening on {HOST}:{PORT_ZMQ_MSG}")
 
     poller = zmq.Poller()
     poller.register(socket, zmq.POLLIN)
 
-    while not shutdown_event.is_set():
-        socks = dict(poller.poll(100))  # 100ms timeout
-        if socks.get(socket) == zmq.POLLIN:
-            message = socket.recv_string()
-            if message == "Start":
-                START_FLAG = True
-            if message == "Stop":
-                START_FLAG = False
+    try:
+        while not shutdown_event.is_set():
+            socks = dict(poller.poll(100))  # 100ms timeout
+            if socks.get(socket) == zmq.POLLIN:
+                message = socket.recv_string()
+                print(f"Received: {message}")
+
+                if message == "Start":
+                    START_FLAG = True
+                elif message == "Stop":
+                    START_FLAG = False
+    except Exception as e:
+        logging.error(f"Error in get_message: {e}")
+    finally:
+        socket.close()
+        context.term()
 
 def send_message(message):
     """
-    Sends a one-sided message to the server
-    @param message: the message to be sent
+    Sends a message to the receiver.
     """
     context = zmq.Context()
     socket = context.socket(zmq.PUSH)
-    socket.setsockopt(zmq.LINGER, 0)  # Set linger to zero to close the socket immediately
-    socket.connect(f"tcp://{HOST}:{PORT_ZMQ_MSG + 1}")  # Different port for messages
+    socket.setsockopt(zmq.LINGER, 0)  # Ensures socket closes immediately after sending
+    socket.connect(f"tcp://{HOST}:{PORT_ZMQ_MSG}")
 
-    print(f"Sending message to {HOST}:{PORT_ZMQ_MSG + 1}...")
-    socket.send_string(message)
-    print("Message sent successfully.")
-    socket.close()
-    context.term()
+    print(f"Sending message to {HOST}:{PORT_ZMQ_MSG}...")
+    try:
+        socket.send_string(message)
+        print("Message sent successfully.")
+    except Exception as e:
+        print(f"Error sending message: {e}")
+    finally:
+        socket.close()
+        context.term()
 
 def master_handler():
 
@@ -257,17 +267,14 @@ def master_handler():
 
         input("Make sure the UT is connected AND make sure the laptop is setup, then press Enter to continue...")
 
-        setup_thread.start()
-        setup_thread.join()
-
         picoscenes_prepare_thread.start()
         picoscenes_prepare_thread.join()
 
-        picoscenes_thread.start()
 
-        time.sleep(10)
         send_message("Start")
+        time.sleep(10)
 
+        picoscenes_thread.start()
 
         os.killpg(os.getpgid(pico_process.pid), signal.SIGTERM)
         pico_process.wait() # Wait for termination to complete.
@@ -282,7 +289,6 @@ def master_handler():
             pass
         picoscenes_thread.start()
         picoscenes_thread.join()
-
 
 
 
