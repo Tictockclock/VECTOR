@@ -67,6 +67,8 @@ thetaRange = [65, 115]   # Theta Range to Sample (MUSIC + Pseudospectra Plotting
 ############################## IMPORTS ##########################################
 import numpy as np                  # Numpy Processing
 import scipy.io                     # To save data to .mat file
+import tkinter as tk                # For file selection
+from tkinter import filedialog      # For file selection (GUI)
 
 ####################### Import VECTOR Libraries ##################################
 # Import VECTOR Libraries
@@ -82,12 +84,24 @@ import bs.nav.processing.filtersofGOR                   as filtersofGOR     # To
 import bs.nav.processing.utilsCSI                       as utilsCSI         # To import CSI from .mats
 import bs.demo.graphing.plotCSI                         as plotCSI          # To plot manipulated CSI
 
-# Ordinary Imports
-import tkinter as tk                # For file selection
-from tkinter import filedialog      # For file selection (GUI)
-
 #################################################################################
 ######################## HELPER FUNCTIONS #######################################
+def detectSwitchSingle(Hest):
+    # For each snapshot k, add or subtract based off of the array geometry:
+    [AT, AR, S, K] = np.shape(Hest)
+
+    phases = np.angle(Hest)
+    diff = wrapPhase(phases[0,1,:,:] - phases[0,0,:,:])
+
+    # Detect and 'undo' the switches
+    _s = S // 2
+    switchMatrix = np.ones_like(Hest)
+    piShift = np.exp(-1j * np.pi)
+    switchMatrix[0, 1, :, diff[_s] < np.mean(diff[_s])] = piShift
+
+    Hest_switched = Hest * switchMatrix
+    return (Hest_switched, switchMatrix)
+
 
 def detectAcuteSwitch(Hest, timestamps):
     # Determine the array configuration given a target source at an acute angle from array parallel
@@ -548,6 +562,7 @@ if __name__ == "__main__":
     print("Converting to usable matrix...")
     [parsedMatrix, centerFreq_arr, chanBW_arr, subcFreq_arr, timestamps] = filtersofGOR.convertToUsableMatrix(forcedCSI, NICdata)
 
+    ####################### ANTENNA PERM STARTS HERE ################################
     # Detect Switches and Apply them
     [deswitchedMatrix, switchMatrix] = detectAcuteSwitch(parsedMatrix, timestamps)
     

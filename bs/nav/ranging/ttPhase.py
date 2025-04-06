@@ -7,11 +7,16 @@ Dimitry Melnikov, 4/6/25 (Modularized)
 '''
 #################################################################################
 ############################# USER INPUTS #######################################
-csiPath = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/sim/ranging-tests/"
-csiPath2 = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/sim/ranging-tests/"
+csiPath = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/outside/2-25-25_Outside/2_BS_LAPTOP_OUTSIDE_90DEG_9-14FT/"
+csiPath2 = "/mnt/c/Users/dmtrm/OneDrive/Schoolwork/(5) Senior Year/Senior Design/VECTOR/bs/nav/csi_data/testing/outside/2-25-25_Outside/2_BS_LAPTOP_OUTSIDE_90DEG_9-14FT/Laptop/"
 #csiPath = "/home/dt12/Code/VECTOR/bs/nav/csi_data/testing/sim/ranging-tests/"
-bothSides = False # False for One-Trip Phase, True for Round-Trip Phase
 initPos = 9 * 0.3048 # Initial position, in meters.
+
+bothSides = True # False for One-Trip Phase, True for Round-Trip Phase
+
+loadViaMats = False # False to load from pre-processed .mat files
+macBS = [0x10, 0x5f, 0xad, 0xd6, 0xa3, 0x2b] # (Patch Setup) Base Station MAC Address
+macUT = [0x8c, 0xe9, 0xee, 0xd9, 0xa2, 0xe2] # (Laptop) User Terminal MAC Address (antenna we're tracking)
 
 #################################################################################
 ############################## IMPORTS ##########################################
@@ -28,11 +33,75 @@ sys.path.insert(0, VECTOR_ROOT) if (VECTOR_ROOT is not None) and (VECTOR_ROOT no
 import setup
 setup.loadModules()
 
-import bs.nav.processing.utilsCSI as utilsCSI           # To import CSI from .mats
-import bs.demo.graphing.plotCSI as plotCSI              # To plot manipulated CSI
+import bs.nav.processing.utilsCSI                       as utilsCSI             # To import CSI from .mats
+import bs.demo.graphing.plotCSI                         as plotCSI              # To plot manipulated CSI
+import bs.nav.processing.filtersofGOR                   as filtersofGOR         # To load raw CSI
+import bs.nav.processing.antennaPermutation             as antennaPermutation   # To unswitch raw CSI
 
 #################################################################################
 ######################## TICKLE FUNCTIONS #######################################
+def loadCSIfromRAW(csiFolder=None,
+                   toDS=0, fromDS=0,
+                   macBS=[], macUT=[]):
+    import tkinter as tk
+    from tkinter import filedialog
+
+    # Select CSI Folder
+    if (csiFolder is None) or (not os.path.isdir(csiFolder)):
+        csiFolder = filedialog.askdirectory(initialdir=os.getcwd(),
+                                                title="Please select CSI cal Folder.")
+
+    # Load CSI
+    [currCSI, csiPath] = filtersofGOR.loadCSIfromRAW(csiFolder,
+                                                     f"Please select CSI Source File.")
+
+    # Process CSI
+    currCSI = filtersofGOR.alignSingle(currCSI)
+
+    if not (macBS == []):
+        currCSI = filtersofGOR.filterSrcDest(currCSI,
+                                             toDS, fromDS, macBS, macUT)
+    
+    # Convert to usable matrix:
+    [currMatrix, _, _, subcFreq_arr, timestamps] = filtersofGOR.convertSingToUsableMatrix(currCSI)
+
+    return (currMatrix, subcFreq_arr[0], timestamps, currCSI, csiPath) # EW!
+
+def alignCSIbsut(Hest1, timestamps1, Hest2, timestamps2, tol=5e-2):
+    # The timestamps come from the raw frames, theoretically.
+    validIndex1 = []
+    validIndex2 = []
+    for k1 in range(len(timestamps1)):
+        minDiff = tol*2
+        minK2 = 0
+        
+        for k2 in range(len(timestamps2)):
+            diff = abs(timestamps1[k1] - timestamps2[k2])
+            
+            if (diff < tol) and (diff < minDiff):
+                minDiff = diff
+                minK2 = k2
+
+        if minDiff < tol:
+            validIndex1.append(k1)
+            validIndex2.append(minK2)
+
+    [AT, AR, S, _] = np.shape(Hest1)
+    Hest1_new = np.zeros((AT, AR, S, len(validIndex1)), dtype=np.complex128)
+    Hest2_new = np.zeros_like(Hest1_new)
+    timestamps1_new = []
+    timestamps2_new = []
+
+    for k1 in range(len(validIndex1)):
+        Hest1_new[:,:,:,k1] = Hest1[:,:,:,validIndex1[k1]]
+        Hest2_new[:,:,:,k1] = Hest2[:,:,:,validIndex2[k1]]
+        timestamps1_new.append(timestamps1[validIndex1[k1]])
+        timestamps2_new.append(timestamps2[validIndex2[k1]])
+    
+    return (Hest1_new, timestamps1_new, Hest2_new, timestamps2_new)
+
+####################### RTP-SPECIFIC STUFF ############################################
+
 def interpolateSubcarriers(Hest, subcFreq):
     # Return CSI over Snapshots (K) at the Center Subcarrier
     # Assume Coherent CSI
@@ -89,6 +158,7 @@ def getDistOTP(Hest, subcFreq, initPos=0):
     # One-Trip Phase. Good for the sim.
     [H_RT, centFreq] = interpolateSubcarriers(Hest, subcFreq)
     d_rtp_array = calculateDisplacement(H_RT, centFreq, initPos)
+    d_rtp_array = convertOTPtoRTP(d_rtp_array)
     return (d_rtp_array, centFreq)
 
 def getDistRTP(Hest1, subcFreq1, \
@@ -107,30 +177,50 @@ def getDistRTP(Hest1, subcFreq1, \
     return (d_rtp_array, centFreq1)
 
 if __name__ == "__main__":
-    print("Loading CSI from Base Station...")
-    [Hest, _, _, subcFreq, timestamps, _, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath=csiPath)
-    print(f"CSI Loaded from Path: {csiPath}")
-    subcFreq = loadedStruct['subcFreq'][:,0] if len(subcFreq) == 1 else subcFreq
+    # Load the data
+    if loadViaMats:
+        # Pre-processed (e.g. Digital Twin)
+        print("Loading CSI from Base Station...")
+        [Hest, _, _, subcFreq, timestamps, _, loadedStruct, csiPath] = utilsCSI.loadCSIfromMAT(csiPath=csiPath)
+        print(f"CSI Loaded from Path: {csiPath}")
+        subcFreq = loadedStruct['subcFreq'][:,0] if len(subcFreq) == 1 else subcFreq
 
-    if bothSides == True:
-        # Load more data
-        print("Loading CSI from User Terminal...")
-        [Hest2, _, _, subcFreq2, _, _, loadedStruct2, csiPath2] = utilsCSI.loadCSIfromMAT(csiPath=csiPath2)
-        print(f"CSI Loaded from Path: {csiPath2}")
-        subcFreq2 = loadedStruct2['subcFreq'][:,0] if len(subcFreq2) == 1 else subcFreq2
+        if bothSides:
+            print("Loading CSI from User Terminal...")
+            [Hest2, _, _, subcFreq2, timestamps2, _, loadedStruct2, csiPath2] = utilsCSI.loadCSIfromMAT(csiPath=csiPath2)
+            print(f"CSI Loaded from Path: {csiPath2}")
+            subcFreq2 = loadedStruct2['subcFreq'][:,0] if len(subcFreq2) == 1 else subcFreq2
 
+    else:
+        # Need to process (e.g. Real Data)
+        print("Loading CSI from Base Station...")
+        [Hest, subcFreq, timestamps, rawCSI, csiPath] = loadCSIfromRAW(csiPath, toDS=1, fromDS=0, macBS=macBS, macUT=macUT)
+
+        if bothSides:
+            print("Loading CSI from User Terminal...")
+            [Hest2, subcFreq2, timestamps2, rawCSI2, csiPath2] = loadCSIfromRAW(csiPath2, toDS=0, fromDS=1, macBS=macBS, macUT=macUT)
+            print(f"CSI Loaded from Path: {csiPath2}")
+
+        # Align the CSI between the BS and UT to make sure they're referring to the same frame
+        [Hest, timestamps, Hest2, timestamps2] = alignCSIbsut(Hest, timestamps, rawCSI, \
+                                                                Hest2, timestamps2, rawCSI2)
+        
+        [Hest,  _] = antennaPermutation.detectSwitchSingle(Hest)
+        [Hest2, _] = antennaPermutation.detectSwitchSingle(Hest2)
+
+    # Use the module
+    if bothSides:
         [d_rtp_array, centFreq] = getDistRTP(Hest1=Hest, subcFreq1=subcFreq, \
                                              Hest2=Hest2, subcFreq2=subcFreq2, \
                                              initPos=initPos)    
-
     else:
-        # Use the module
         [d_rtp_array, centFreq] = getDistOTP(Hest, subcFreq, initPos)
 
     # Plotting
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(timestamps[0], d_rtp_array)
+    time = timestamps[0] if len(timestamps) == 1 else timestamps
+    ax.plot(time, d_rtp_array)
     ax.set_title("Linear Distance over Time")
     ax.set_xlabel("Time (sec)")
     ax.set_ylabel("Distance (m)")
