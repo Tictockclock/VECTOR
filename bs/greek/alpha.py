@@ -172,10 +172,8 @@ def get_message():
                 message = data.decode('utf-8')
                 print(f"Received message: {message}")
                 if message == "Start":
-                    global START_FLAG
                     START_FLAG = "Start"
                 elif message == "Stop":
-                    global START_FLAG
                     START_FLAG = "Stop"
     except Exception as e:
         print(f"An error occurred in receive_message: {e}")

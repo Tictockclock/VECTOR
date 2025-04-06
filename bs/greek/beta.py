@@ -29,7 +29,7 @@ PORT_ZMQ_MSG = 12347
 CONFIG_PATH = None
 SAVE_DIR = 'received_files'
 
-mypath = "/home/dt12/Code/VECTOR/bs/server/burst_test/config.json"
+mypath = "/home/dt12/Code/VECTOR/bs/greek/config.json"
 if os.path.exists(mypath):
     CONFIG_PATH = mypath
 else:
