@@ -34,7 +34,7 @@ import setup
 setup.loadModules()
 
 import bs.nav.processing.utilsCSI                       as utilsCSI             # To import CSI from .mats
-import bs.demo.graphing.plotCSI                         as plotCSI              # To plot manipulated CSI
+import bs.demo.graphing.plotRanging                     as plotRanging          # To plot distance
 import bs.nav.processing.filtersofGOR                   as filtersofGOR         # To load raw CSI
 import bs.nav.processing.antennaPermutation             as antennaPermutation   # To unswitch raw CSI
 
@@ -202,8 +202,8 @@ if __name__ == "__main__":
             print(f"CSI Loaded from Path: {csiPath2}")
 
         # Align the CSI between the BS and UT to make sure they're referring to the same frame
-        [Hest, timestamps, Hest2, timestamps2] = alignCSIbsut(Hest, timestamps, rawCSI, \
-                                                                Hest2, timestamps2, rawCSI2)
+        [Hest, timestamps, Hest2, timestamps2] = alignCSIbsut(Hest, timestamps, \
+                                                                Hest2, timestamps2)
         
         [Hest,  _] = antennaPermutation.detectSwitchSingle(Hest)
         [Hest2, _] = antennaPermutation.detectSwitchSingle(Hest2)
@@ -217,14 +217,6 @@ if __name__ == "__main__":
         [d_rtp_array, centFreq] = getDistOTP(Hest, subcFreq, initPos)
 
     # Plotting
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(figsize=(10, 6))
-    time = timestamps[0] if len(timestamps) == 1 else timestamps
-    ax.plot(time, d_rtp_array)
-    ax.set_title("Linear Distance over Time")
-    ax.set_xlabel("Time (sec)")
-    ax.set_ylabel("Distance (m)")
-    plt.grid()
-    plt.show(block=False)
+    plotRanging.plotDistance(d_rtp_array, timestamps)
 
     import pdb; pdb.set_trace()
