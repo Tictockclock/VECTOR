@@ -132,6 +132,21 @@ def getMUSICSpectrum(Hest, subcFreq, elemPos, windowSize, thetaRange):
 
     return doaMUSIC
 
+def getDOAfromSpectrum(doaMUSIC, thetaRange, \
+                       sSlice=-1, atSlice=-1):
+    # Return DOA from Spectrum for a given Snapshot K
+    [AT, T, S, K] = np.size(doaMUSIC)
+    sSlice = sSlice if sSlice > -1 else S//2 # Middle subcarrier by default
+    atSlice= atSlice if atSlice > -1 else 0  # 0th Transmit Antenna by default
+
+    theta = np.linspace(thetaRange[0], thetaRange[1], T) # All possible angles to search through (deg)
+    outDOA = []
+    for k in range(K):
+        currDOA_ind = np.argmax(doaMUSIC[atSlice,:,sSlice,k]) # Get the index corresponding closest to the DOA for the selected subcarrier, & AT antenna
+        outDOA.append(theta[currDOA_ind])
+
+    return np.array(outDOA)
+
 if __name__ == "__main__":
     # Load in the data:
     [Hest, centerFreq, chanBW, subcFreq, elemPos, _, csiPath] = \
