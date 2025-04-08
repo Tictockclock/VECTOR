@@ -80,6 +80,7 @@ import setup; setup.loadModules()
 import bs.nav.doa.naiveMUSIC                            as naiveMUSIC       # For DOA estimation (double-check our work)
 import bs.demo.graphing.plotDOA                         as plotDOA          # To plot DOA spectra
 import bs.nav.processing.postprocessing.cableCalNICS    as cableCalNICS     # For some useful cal functions
+import bs.nav.processing.reference_antenna_offset_cal   as refAntOffset     # To estimate the phase expected due to the Ref antenna
 import bs.nav.processing.filtersofGOR                   as filtersofGOR     # To import raw CSI from .csi files
 import bs.nav.processing.utilsCSI                       as utilsCSI         # To import CSI from .mats
 import bs.demo.graphing.plotCSI                         as plotCSI          # To plot manipulated CSI
@@ -103,7 +104,7 @@ def detectSwitchSingle(Hest):
     return (Hest_switched, switchMatrix)
 
 
-def detectAcuteSwitch(Hest, timestamps):
+def detectAcuteSwitch(Hest):
     # Determine the array configuration given a target source at an acute angle from array parallel
     #
     #               (T)
@@ -419,7 +420,7 @@ def getCFO32(deswitchedMatrix, _s):
     return (phases[0, 3, _s, :] - phases[0, 2, _s, :])
 
 
-def pushToKF(deswitchedMatrix, timestamps, ckf=None, lasttimestamp=-1):
+def pushToKF(deswitchedMatrix, timestamps, ckf=None, lasttimestamp=-1, antSel="10"):
     # Push all frames in the `deswitchedMatrix`, one frame at a time, to the Circular Kalman Filter
     # Assume input array is already sorted by timestamp
     # Assume timestamps in seconds
@@ -429,9 +430,9 @@ def pushToKF(deswitchedMatrix, timestamps, ckf=None, lasttimestamp=-1):
         ckf = CFO_KF(
             dt=timestamps[1] - timestamps[0],
             phase_noise=1e5,      # Moderate phase noise (multipath-like)
-            freq_noise=1e-5,      # Tiny frequency noise (stable clock)
+            freq_noise=4e-4,      # Tiny frequency noise (stable clock)
             measurement_noise=0.16,  # 0.4^2 = 0.16
-            initial_freq_var=1e10    # Allow rapid initial convergence
+            initial_freq_var=1e12    # Allow rapid initial convergence
         )
 
     if np.max(timestamps) < lasttimestamp:
@@ -450,11 +451,18 @@ def pushToKF(deswitchedMatrix, timestamps, ckf=None, lasttimestamp=-1):
     _s = S // 2 # Middle Subcarrier. Use as discriminator -- should be the most stable.
 
     # Define commonly used functions:
-    def updateKF(deswitchedMatrix, dt, k):
-        ckf.predict(dt)
-        z = wrapPhase(getCFO10(deswitchedMatrix, _s)[k])
-        ckf.update(z)
-        return ckf.get_state()
+    if antSel == "10":
+        def updateKF(deswitchedMatrix, dt, k):
+            ckf.predict(dt)
+            z = wrapPhase(getCFO10(deswitchedMatrix, _s)[k])
+            ckf.update(z)
+            return ckf.get_state()
+    else: # antSel == "32"
+        def updateKF(deswitchedMatrix, dt, k):
+            ckf.predict(dt)
+            z = wrapPhase(getCFO32(deswitchedMatrix, _s)[k])
+            ckf.update(z)
+            return ckf.get_state()
 
     if lasttimestamp == -1:
         # Assume ideal sampling time
@@ -477,6 +485,7 @@ def pushToKF(deswitchedMatrix, timestamps, ckf=None, lasttimestamp=-1):
     lasttimestamp = timestamps[-1]
 
     # Plot the estimates:
+    """
     import matplotlib.pyplot as plt
     plt.figure(figsize=(10, 4))
     _time = np.array(timestamps[lowestIndex+1:]) - timestamps[lowestIndex] 
@@ -487,8 +496,32 @@ def pushToKF(deswitchedMatrix, timestamps, ckf=None, lasttimestamp=-1):
     plt.legend()
     plt.title("Circular Kalman Filter Phase Tracking")
     plt.show(block=False)
-
+    """
     return ckf, lasttimestamp # Return KF reference + most recent timestamp for the Kalman Filter
+
+def applyKFtoCFO(Hest, ckf_10, ckf_32, dt, armAngle, centFreq):
+    # Using the KF for both 10 and 32 (and a known time difference dt),
+    #  (as well as the angle of the arm holding the reference antenna + center carrier frequency)
+
+    # Run the KF to get the expected 1-0 Deltas and 3-2 Deltas:
+    ckf_10.predict(dt=dt)
+    ckf_32.predict(dt=dt)
+    diff10, _, _ = ckf_10.get_state_at(0, include_noise=True)
+    diff32, _, _ = ckf_10.get_state_at(0, include_noise=True)
+
+    # Extract Expected Phase based off of Arm Angle & Center Frequency (Neglect Group Delay)
+    expectedPhase = refAntOffset.phase_to_antennas(armAngle, centFreq)
+    diff10 = wrapPhase(diff10 - (expectedPhase[1] - expectedPhase[0])) # diff10 = ((1 + F) - 0), we're canceling out the 1 - 0 and keeping the F
+    diff32 = wrapPhase((expectedPhase[3] - expectedPhase[2]) - diff32) # diff32 = (3 - (2 + F))
+
+    # Generate CFO Compensation Matrix
+    [AT, AR, S, K] = np.shape(Hest)
+    cfoMatrix = np.ones([1, 4, S, 1], dtype=np.complex128)
+    cfoMatrix[0, 0, :, 0] = cfoMatrix[0, 0, :, 0] * np.exp(1j * diff10) # Add 'F' to elem 0.
+    cfoMatrix[0, 3, :, 0] = cfoMatrix[0, 3, :, 0] * np.exp(1j * diff32) # Add 'F' to elem 3.
+
+    return Hest * cfoMatrix # Apply CFO Matrix to incoming Hest
+
 
 def testKF_REAL(deswitchedMatrix, timestamps):
     [AT, AR, S, K] = np.shape(deswitchedMatrix)
@@ -504,17 +537,30 @@ def testKF_REAL(deswitchedMatrix, timestamps):
 
     # 'Tracking' Phase
     estPhase = []
-    for k in range(0, len(realTimestamps)):
-        dt = realTimestamps[k] - lasttimestamp
-        phase_pred, freq_pred, P_pred = ckf.get_state_at(dt, include_noise=True)
+    DT_SIM = 1/2550
+    timestamps_est = np.arange(realTimestamps[0], realTimestamps[-1], DT_SIM) 
+    for k in range(0, len(timestamps_est)):
+        if k == 0:
+            dt = timestamps_est[k] - lasttimestamp#realTimestamps[k] - lasttimestamp
+        else:
+            dt = timestamps_est[k] - timestamps_est[k-1]
+
+        ckf.predict(dt=dt)
+        if (k % 9) == 0:
+            # Periodically update
+            ckf.update(wrapPhase(getCFO10(realMatrix, S//2)[k]))
+            
+        #phase_pred, freq_pred, P_pred = ckf.get_state_at(dt, include_noise=True)
+        phase_pred, freq_pred, P_pred = ckf.get_state_at(0, include_noise=True)
         estPhase.append(phase_pred)  # Get current state
 
     # Plot the estimates to validate:
+    import pdb; pdb.set_trace()
     import matplotlib.pyplot as plt
     plt.figure(figsize=(10, 4))
     _time = np.array(realTimestamps) - realTimestamps[0]
     plt.plot(_time, wrapPhase(getCFO10(realMatrix, S//2)), label='Measured Phase', marker='o')
-    plt.plot(_time, wrapPhase(np.array(estPhase)), label='Estimated Phase', marker='x')
+    plt.plot(timestamps_est - realTimestamps[0], wrapPhase(np.array(estPhase)), label='Estimated Phase', marker='x')
     plt.xlabel("Time (s)")
     plt.ylabel("Phase (rad)")
     plt.legend()
@@ -528,6 +574,57 @@ def predictCoherenceMatrix(deswitchedMatrix, refTimestamps, switchMatrix, currTi
     # For the given timestamp, return a modified matrix, as well as the calibration matrix to 'undo' 
     # the bulk offset from one NIC to the next, making the resulting CSI coherent.
     return 0 # TODO
+
+def applyTrainingMatrix(trackMatrix, trackTimestamps, \
+                        trainMatrix, trainTimestamps,
+                        centFreq, armAngle):
+    # Assume the tracking and training matrices haven't been un-switched yet.
+    # Assume the Tracking and Training frames were generated around the same -- interwoven.
+    # Zipper-Traverse.
+
+    # First, sort the Matrices according to time
+    # Sort trackMatrix according to time (small to largest)
+    trackSort = np.argsort(trackTimestamps)
+    trackMatrix = trackMatrix[:,:,:,trackSort]
+    trackTimestamps = trackTimestamps[trackSort]
+    # Sort trainMatrix according to time
+    trainSort = np.argsort(trainTimestamps)
+    trainMatrix = trainMatrix[:,:,:,trainSort]
+    trainTimestamps = trainTimestamps[trainSort]
+    
+    # Undo the switching in the trainMatrix: (Quicker to do outside the loop)
+    [refMatrix, switchMatrix] = detectAcuteSwitch(trainMatrix)
+
+    # Pull some of the training frames to kickstart the Kalman filter:
+    trainK = 5 # Shared index to track current training frame
+    [ckf_10, lasttimestamp_10] = pushToKF(refMatrix[:,:,:,:trainK], trainTimestamps[:,:,:,:trainK], antSel="10")
+    [ckf_32, lasttimestamp_32] = pushToKF(refMatrix[:,:,:,:trainK], trainTimestamps[:,:,:,:trainK], antSel="32")
+
+    # Iterate up according to the minimum; switch btwn as needed
+    trackK = 0; # Shared index to track current tracking frame
+    while (trackK < len(trackTimestamps)) and (trainK < len(trackTimestamps)):
+        # Pick whichever is smaller
+        if  trainTimestamps[trainK] < trackTimestamps[trackK]:
+            # Training Frames are more current. Update KF
+            [ckf_10, lasttimestamp_10] = pushToKF(refMatrix[:,:,:,trainK], trainTimestamps[:,:,:,trainK], ckf_10, lasttimestamp_10, antSel="10")
+            [ckf_32, lasttimestamp_32] = pushToKF(refMatrix[:,:,:,trainK], trainTimestamps[:,:,:,trainK], ckf_32, lasttimestamp_32, antSel="32")
+            # Iterate
+            trainK = trainK + 1
+        else: # trackTimestamps[trackK] <= trainTimestamps[trainK]
+            # Tracking Frames are more current. Apply data from previous training iteration
+            # Apply the most recent switch
+            currTrackMatrix = trackMatrix[:,:,:,trackK] * switchMatrix[:,:,:,trainK-1]
+
+            # Use Kalman Filter to predict CFO
+            dt = trackTimestamps[trackK] - trainTimestamps[trainK-1] # Dist to previous timestamp
+            trackMatrix[:,:,:,trackK] = applyKFtoCFO(currTrackMatrix, ckf_10, ckf_32, dt, armAngle, centFreq)
+
+            # Apply predicted CFO to ALL of the traces.
+            # Iterate
+            trackK = trackK + 1
+
+    return trackMatrix
+
 
 if __name__ == "__main__":
     # Calculate Cable Calibration Coefficients
@@ -564,7 +661,7 @@ if __name__ == "__main__":
 
     ####################### ANTENNA PERM STARTS HERE ################################
     # Detect Switches and Apply them
-    [deswitchedMatrix, switchMatrix] = detectAcuteSwitch(parsedMatrix, timestamps)
+    [deswitchedMatrix, switchMatrix] = detectAcuteSwitch(parsedMatrix)
     
     #[ckf, lasttimestamp] = pushToKF(deswitchedMatrix, timestamps)
     testKF_REAL(deswitchedMatrix, timestamps)

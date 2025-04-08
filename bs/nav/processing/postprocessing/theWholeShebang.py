@@ -74,6 +74,8 @@ thetaRange = [65, 115]   # Theta Range to Sample (MUSIC + Pseudospectra Plotting
 
 initPos = 9 * 0.3048 # Initial position, in meters.
 
+armAngle = 45.0702
+
 #################################################################################
 ############################## IMPORTS ##########################################
 import numpy as np                  # Numpy Processing
@@ -163,16 +165,9 @@ print("(Beta) Detecting and undoing internal NIC switching...")
 print("(Lap) Detecting and undoing internal NIC switching...")
 [Hest_Lap, _] = antennaPermutation.detectSwitchSingle(Hest_Lap)
 
-# First, detect switching via the reference (Alpha_TRAIN) -- extract timestamps
-# Iterate over the tracked data (Alpha_TRACK) -- for each frame, look for timestamp before/after and switching state -- apply switching matrix there
-# Next, iterate over both the tracked data and the reference
-#   - Train the Kalman filter
-#   - When finding tracked data in between Kalman frames, interpolate phase
-#   - apply interpolated phase to tracked data
-#   - spit out de-CFO'd data
-
-# TODO - Make Alpha Tracking CSI Coherent!
-Hest_Alpha = parsedMatrix_Alpha_TRACK
+Hest_Alpha = antennaPermutation.applyTrainingMatrix(parsedMatrix_Alpha_TRACK, timestamps_Alpha_TRACK, \
+                                                    parsedMatrix_Alpha_TRAIN, timestamps_Alpha_TRAIN, \
+                                                    np.mean(subcFreq_Alpha_TRAIN), armAngle=armAngle) # TODO - what the fuck?
 subcFreq_Alpha = subcFreq_Alpha_TRACK
 
 ############################ Solve Navigation ####################################

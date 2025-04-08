@@ -47,6 +47,9 @@ def distance_to_antennas(theta_deg):
     return dists
 
 def phase_to_antennas(theta_deg, cent_freq):
+    # Given an Arm Angle off of parallel (theta_deg = 0 is flat against the wall, theta_deg = +90 is straight out, going CCW from top)
+    # Cent_Freq ~ Center Frequency, in Hz.
+    # Return Phases for [Elem 0, Elem 1, Elem 2, Elem 3]
     dists = distance_to_antennas(theta_deg)
     k = 2 * np.pi * cent_freq / 299792458 # speed of light (Wavenumber)
     return dists * k
