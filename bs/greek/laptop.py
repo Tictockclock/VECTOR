@@ -60,6 +60,36 @@ def load_config():
 
     #print(config)
 
+
+def ping():
+    """
+    Pings the specified IP address using the ping command.
+
+    Returns:
+        bool: True if the ping was successful, False otherwise.
+    """
+
+    cmd = f"""ping -i 0.1 10.18.30.78"""
+
+    print("Running pinging command:")
+    print(cmd)
+
+    proc = subprocess.Popen(cmd, shell=True)
+    proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
+    try:
+        # Wait for process to complete, but enforce timeout
+        proc.wait(timeout=9999)
+        print("Command completed within time limit")
+
+    except subprocess.TimeoutExpired:
+        print(f"""Command did not complete within {config["picoscenes"]["timelimit"]} seconds""")
+        print("Forcing termination of the process group")
+        # Terminate entire process group
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
+        proc.wait() # Wait for termination to complete.
+
+
 def get_message():
     """
     Listens for an incoming connection on the global PORT and returns the received message.
@@ -182,6 +212,9 @@ def master_handler():
 
     while START_FLAG != "Start":
         pass
+
+    ping_thread = threading.Thread(target=ping)
+    ping_thread.start()
 
     # Wait for the PicoScenes preparation to complete
     print("PicoScenes preparation completed.")
