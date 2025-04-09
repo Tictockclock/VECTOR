@@ -67,6 +67,7 @@ def get_message():
     Returns:
         str: The received message.
     """
+    global START_FLAG
     try:
         # Create a socket using IPv4 and TCP
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
