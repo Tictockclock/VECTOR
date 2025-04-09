@@ -172,7 +172,7 @@ def start_picoscenes():
     global pico_process
 
     # Start PicoScenes as a subprocess
-    cmd = f"""PicoScenes \"-d debug; -i {config["picoscenes"]["monID1"]} --mode logger  --output {config["picoscenes"]["NIC_save_file1"]}; -q\""""
+    cmd = f"""PicoScenes \"-d debug; -i 2 --mode logger  --output {config["picoscenes"]["NIC_save_file1"]}\""""
 
     print("Running injection command:")
     print(cmd)
