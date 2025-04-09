@@ -159,15 +159,15 @@ def hotspot_setup():
         if cmd[0:4] == "sudo":
             proc.communicate(input=f"{SUDO_PASSWORD}\n".encode())
 
-    # Disable power save on all interfaces
-    run_command(f"""sudo -S iw dev {config["setup"]["ap_interface"]} set power_save off""")
-    run_command(f"""sudo -S iw dev {config["setup"]["monitor_interface"]} set power_save off""")
-    #run_command(f"""sudo -S iw dev {config["setup"]["reference_interface"]} set power_save off""")
+    # # Disable power save on all interfaces
+    # run_command(f"""sudo -S iw dev {config["setup"]["ap_interface"]} set power_save off""")
+    # run_command(f"""sudo -S iw dev {config["setup"]["monitor_interface"]} set power_save off""")
+    # #run_command(f"""sudo -S iw dev {config["setup"]["reference_interface"]} set power_save off""")
 
-    # Set the reference  hotspot to the chosen channel
-    #run_command(f"""sudo -S iwconfig {config["setup"]["reference_interface"]} channel {config["setup"]["channel_number"]}""")
-    run_command(f"""sudo -S nmcli connection modify {config["setup"]["hotspot_name"]}-hotspot 802-11-wireless.channel {config["setup"]["channel_number"]}""")
-    run_command(f"""sudo -S nmcli connection modify {config["setup"]["hotspot_name"]}-hotspot ifname {config["setup"]["ap_interface"]}""")
+    # # Set the reference  hotspot to the chosen channel
+    # #run_command(f"""sudo -S iwconfig {config["setup"]["reference_interface"]} channel {config["setup"]["channel_number"]}""")
+    # run_command(f"""sudo -S nmcli connection modify {config["setup"]["hotspot_name"]}-hotspot 802-11-wireless.channel {config["setup"]["channel_number"]}""")
+    # run_command(f"""sudo -S nmcli connection modify {config["setup"]["hotspot_name"]}-hotspot ifname {config["setup"]["ap_interface"]}""")
 
     # Start the hotspot+
     run_command(f"""sudo -S nmcli connection up {config["setup"]["hotspot_name"]}-hotspot""")
