@@ -121,7 +121,7 @@ def hack_rf_pinging2():
     in a loop until the `shutdown_event` is set, allowing for graceful termination.
     """
 
-    cmd = f"""PicoScenes \"-d debug -i hackrf0 --freq {config["hack_rf"]["freq"]} --rate {config["hack_rf"]["rate"]} --mode {config["hack_rf"]["mode"]} --repeat {config["hack_rf"]["repeat"]} --delay {config["hack_rf"]["delay"]} --preset {config["hack_rf"]["preset"]}; -i 2 --mode logger  --output BETA_HOTSPOT_CSI \""""
+    cmd = f"""PicoScenes \"-d debug -i hackrf0 --freq {config["hack_rf"]["freq"]} --rate {config["hack_rf"]["rate"]} --mode {config["hack_rf"]["mode"]} --repeat {config["hack_rf"]["repeat"]} --delay {config["hack_rf"]["delay"]} --preset {config["hack_rf"]["preset"]}; -i 33 --mode logger  --output BETA_HOTSPOT_CSI \""""
 
     print("Running setup command:")
     print(cmd)

@@ -83,5 +83,14 @@
     },
     "pi_settings": {
       "ip": "10.42.0.194"
+    },
+
+    "hack_rf": {
+        "freq": 2447,
+        "rate": 20e6,
+        "mode": "injector",
+        "repeat": 1e4,
+        "delay": 1e3,
+        "preset": "TX_CBW_20_VHT"
     }
 }
