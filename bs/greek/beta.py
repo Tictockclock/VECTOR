@@ -21,7 +21,7 @@ config = None
 bab = None
 done_pinging_flag = False
 START_FLAG = False
-TARGET_IP = "10.42.0.56"  # Change this to the receiver's IP address (laptop)
+  # Change this to the receiver's IP address (laptop)
 PORT = 5000
 BUFFER_SIZE = 1024
 HOST = '0.0.0.0'
@@ -217,6 +217,7 @@ def send_message_laptop(message):
     Parameters:
         message (str): The message to send.
     """
+    TARGET_IP = "10.42.0.56"
     try:
         # Create a socket using IPv4 and TCP
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -233,6 +234,7 @@ def send_message_alpha(message):
     Parameters:
         message (str): The message to send.
     """
+    TARGET_IP = "10.18.28.9"
     try:
         # Create a socket using IPv4 and TCP
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
